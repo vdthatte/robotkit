@@ -1,0 +1,1900 @@
+{
+  "entries" : [
+    {
+      "compatibility" : [
+        {
+          "description" : "Native target for Arduino Uno projects",
+          "title" : "Board Support"
+        }
+      ],
+      "defaultAttributes" : {
+        "footprint" : "uno"
+      },
+      "defaultLabel" : "Arduino Uno",
+      "defaultPins" : [
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "D6",
+        "D7",
+        "D8",
+        "D9",
+        "D10",
+        "D11",
+        "D12",
+        "D13",
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "5V",
+        "GND"
+      ],
+      "displayName" : "Arduino Uno Board",
+      "electricalInterfaces" : [
+        {
+          "description" : "Controller GPIO pins",
+          "direction" : "bidirectional",
+          "name" : "D2-D13 / A0-A5",
+          "signals" : [
+            "digital",
+            "analog",
+            "pwm"
+          ]
+        },
+        {
+          "description" : "Regulated board power",
+          "direction" : "output",
+          "name" : "5V",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Board ground",
+          "direction" : "output",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes firmware and sensor data",
+          "direction" : "input",
+          "name" : "Firmware",
+          "role" : "firmware"
+        },
+        {
+          "description" : "Produces digital, PWM, and bus control signals",
+          "direction" : "output",
+          "name" : "Control Signals",
+          "role" : "controlSignal"
+        }
+      ],
+      "groupTitle" : "Boards",
+      "id" : "robotkit.board.uno",
+      "kind" : "board",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "uno",
+          "description" : "Board visual variant",
+          "key" : "footprint",
+          "title" : "Footprint"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Main MCU board and firmware endpoint",
+      "vendor" : "robotKit",
+      "wikiURL" : null
+    },
+    {
+      "compatibility" : [],
+      "defaultAttributes" : {
+        "color" : "amber"
+      },
+      "defaultLabel" : "LED",
+      "defaultPins" : [
+        "A",
+        "K"
+      ],
+      "displayName" : "LED",
+      "electricalInterfaces" : [
+        {
+          "description" : "Anode",
+          "direction" : "input",
+          "name" : "A",
+          "signals" : [
+            "digital",
+            "power"
+          ]
+        },
+        {
+          "description" : "Cathode",
+          "direction" : "input",
+          "name" : "K",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Emits visible state when forward biased",
+          "direction" : "output",
+          "name" : "Light",
+          "role" : "displayState"
+        }
+      ],
+      "groupTitle" : "Outputs",
+      "id" : "robotkit.led",
+      "kind" : "led",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "amber",
+          "description" : "LED color",
+          "key" : "color",
+          "title" : "Color"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Indicator output component",
+      "vendor" : "robotKit",
+      "wikiURL" : null
+    },
+    {
+      "compatibility" : [],
+      "defaultAttributes" : {
+        "value" : "220"
+      },
+      "defaultLabel" : "220 ohm",
+      "defaultPins" : [
+        "1",
+        "2"
+      ],
+      "displayName" : "Resistor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Terminal 1",
+          "direction" : "bidirectional",
+          "name" : "1",
+          "signals" : [
+            "digital",
+            "analog",
+            "power"
+          ]
+        },
+        {
+          "description" : "Terminal 2",
+          "direction" : "bidirectional",
+          "name" : "2",
+          "signals" : [
+            "digital",
+            "analog",
+            "power"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Limits current through a connected load",
+          "direction" : "output",
+          "name" : "Current Limit",
+          "role" : "reasoningHint"
+        }
+      ],
+      "groupTitle" : "Passives",
+      "id" : "robotkit.resistor",
+      "kind" : "resistor",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "220",
+          "description" : "Resistance in ohms",
+          "key" : "value",
+          "title" : "Resistance"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Inline passive component",
+      "vendor" : "robotKit",
+      "wikiURL" : null
+    },
+    {
+      "compatibility" : [],
+      "defaultAttributes" : {
+        "style" : "momentary"
+      },
+      "defaultLabel" : "Button",
+      "defaultPins" : [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "displayName" : "Pushbutton",
+      "electricalInterfaces" : [
+        {
+          "description" : "Switch contacts",
+          "direction" : "bidirectional",
+          "name" : "1-4",
+          "signals" : [
+            "digital"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Takes user press state",
+          "direction" : "input",
+          "name" : "Press",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs a digital button state",
+          "direction" : "output",
+          "name" : "Signal",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "Inputs",
+      "id" : "robotkit.button",
+      "kind" : "button",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "momentary",
+          "description" : "Switch behavior",
+          "key" : "style",
+          "title" : "Style"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Momentary digital input",
+      "vendor" : "robotKit",
+      "wikiURL" : null
+    },
+    {
+      "compatibility" : [],
+      "defaultAttributes" : {
+        "type" : "piezo"
+      },
+      "defaultLabel" : "Speaker",
+      "defaultPins" : [
+        "SIG",
+        "GND"
+      ],
+      "displayName" : "Speaker",
+      "electricalInterfaces" : [
+        {
+          "description" : "Audio drive input",
+          "direction" : "input",
+          "name" : "SIG",
+          "signals" : [
+            "digital",
+            "pwm"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Produces sound",
+          "direction" : "output",
+          "name" : "Audio",
+          "role" : "audio"
+        }
+      ],
+      "groupTitle" : "Outputs",
+      "id" : "robotkit.speaker",
+      "kind" : "speaker",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "piezo",
+          "description" : "Speaker type",
+          "key" : "type",
+          "title" : "Type"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Audio output sink",
+      "vendor" : "robotKit",
+      "wikiURL" : null
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "family" : "gravity-digital"
+      },
+      "defaultLabel" : "Gravity Digital Sensor",
+      "defaultPins" : [
+        "SIG",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity Digital Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Digital signal output",
+          "direction" : "output",
+          "name" : "SIG",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes environment state",
+          "direction" : "input",
+          "name" : "World State",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs a digital sensor event",
+          "direction" : "output",
+          "name" : "Reading",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.digital.generic",
+      "kind" : "digitalSensorModule",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "gravity-digital",
+          "description" : "DFRobot module family",
+          "key" : "family",
+          "title" : "Family"
+        },
+        {
+          "defaultValue" : "0.50",
+          "description" : "Digital trigger threshold",
+          "key" : "threshold",
+          "title" : "Threshold"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Generic DFRobot Gravity digital sensor module",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Analog / Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "family" : "gravity-analog",
+        "threshold" : "0.50"
+      },
+      "defaultLabel" : "Gravity Analog Sensor",
+      "defaultPins" : [
+        "AOUT",
+        "DOUT",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity Analog Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Analog reading output",
+          "direction" : "output",
+          "name" : "AOUT",
+          "signals" : [
+            "analog"
+          ]
+        },
+        {
+          "description" : "Thresholded digital output",
+          "direction" : "output",
+          "name" : "DOUT",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes environment state",
+          "direction" : "input",
+          "name" : "World State",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs a proportional reading",
+          "direction" : "output",
+          "name" : "Analog Reading",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.analog.generic",
+      "kind" : "analogSensorModule",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "0.50",
+          "description" : "Digital comparator threshold",
+          "key" : "threshold",
+          "title" : "Threshold"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Generic DFRobot Gravity analog sensor module",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires I2C capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "address" : "0x00",
+        "family" : "gravity-i2c"
+      },
+      "defaultLabel" : "Gravity I2C Module",
+      "defaultPins" : [
+        "SDA",
+        "SCL",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity I2C Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "I2C bus",
+          "direction" : "bidirectional",
+          "name" : "SDA/SCL",
+          "signals" : [
+            "i2c"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes environment state",
+          "direction" : "input",
+          "name" : "World State",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs I2C-readable values",
+          "direction" : "output",
+          "name" : "Structured Reading",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.i2c.generic",
+      "kind" : "i2cSensorModule",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "0x00",
+          "description" : "Device bus address",
+          "key" : "address",
+          "title" : "I2C Address"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Generic DFRobot Gravity I2C sensor or peripheral",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires UART capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "baud" : "9600",
+        "family" : "gravity-uart"
+      },
+      "defaultLabel" : "Gravity UART Module",
+      "defaultPins" : [
+        "TX",
+        "RX",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity UART Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Serial interface",
+          "direction" : "bidirectional",
+          "name" : "TX/RX",
+          "signals" : [
+            "uart"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes environment state",
+          "direction" : "input",
+          "name" : "World State",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Streams UART data",
+          "direction" : "output",
+          "name" : "Serial Reading",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.uart.generic",
+      "kind" : "uartSensorModule",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "9600",
+          "description" : "Serial transport speed",
+          "key" : "baud",
+          "title" : "Baud Rate"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Generic DFRobot Gravity UART module",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires UART capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "protocol" : "uart"
+      },
+      "defaultLabel" : "AI Vision Sensor",
+      "defaultPins" : [
+        "TX",
+        "RX",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "AI Vision Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Serial interface",
+          "direction" : "bidirectional",
+          "name" : "TX/RX",
+          "signals" : [
+            "uart"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes world imagery",
+          "direction" : "input",
+          "name" : "Scene",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs recognized targets",
+          "direction" : "output",
+          "name" : "Detections",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.vision.generic",
+      "kind" : "visionSensorModule",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "uart",
+          "description" : "Transport protocol",
+          "key" : "protocol",
+          "title" : "Protocol"
+        }
+      ],
+      "sku" : "SEN0314",
+      "summary" : "Vision coprocessor for robotics and perception",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/sen0314/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "mode" : "dry-alert"
+      },
+      "defaultLabel" : "Soil Probe",
+      "defaultPins" : [
+        "OUT",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity Soil Moisture Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Thresholded moisture signal",
+          "direction" : "output",
+          "name" : "OUT",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes soil moisture from the world",
+          "direction" : "input",
+          "name" : "Soil Moisture",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs dry/wet state",
+          "direction" : "output",
+          "name" : "Moisture Alert",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.soil-moisture",
+      "kind" : "soilSensor",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "dry-alert",
+          "description" : "Alert condition",
+          "key" : "mode",
+          "title" : "Mode"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Plant soil moisture threshold sensor",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Analog / Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "mode" : "dark-alert",
+        "threshold" : "0.50"
+      },
+      "defaultLabel" : "Light Sensor",
+      "defaultPins" : [
+        "AOUT",
+        "DOUT",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity Ambient Light Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Analog light level output",
+          "direction" : "output",
+          "name" : "AOUT",
+          "signals" : [
+            "analog"
+          ]
+        },
+        {
+          "description" : "Digital comparator output",
+          "direction" : "output",
+          "name" : "DOUT",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes ambient light level",
+          "direction" : "input",
+          "name" : "Ambient Light",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs a light reading or alert",
+          "direction" : "output",
+          "name" : "Light Reading",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.light-sensor",
+      "kind" : "lightSensor",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "0.50",
+          "description" : "Comparator threshold",
+          "key" : "threshold",
+          "title" : "Threshold"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Ambient light threshold sensor",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "humidityThreshold" : "0.70",
+        "threshold" : "28"
+      },
+      "defaultLabel" : "Climate Sensor",
+      "defaultPins" : [
+        "DATA",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity Climate Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Digital sensor bus",
+          "direction" : "output",
+          "name" : "DATA",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes temperature and humidity",
+          "direction" : "input",
+          "name" : "Climate",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs threshold crossings",
+          "direction" : "output",
+          "name" : "Climate Reading",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.climate-sensor",
+      "kind" : "climateSensor",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "28",
+          "description" : "Temperature threshold in C",
+          "key" : "threshold",
+          "title" : "Temperature Threshold"
+        },
+        {
+          "defaultValue" : "0.70",
+          "description" : "Humidity threshold ratio",
+          "key" : "humidityThreshold",
+          "title" : "Humidity Threshold"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Temperature and humidity threshold sensor",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "mode" : "trigger"
+      },
+      "defaultLabel" : "Microphone",
+      "defaultPins" : [
+        "OUT",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity Sound Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Sound activity output",
+          "direction" : "output",
+          "name" : "OUT",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes audio activity",
+          "direction" : "input",
+          "name" : "Sound Pressure",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs sound trigger state",
+          "direction" : "output",
+          "name" : "Trigger",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.sound-sensor",
+      "kind" : "microphone",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "trigger",
+          "description" : "Trigger behavior",
+          "key" : "mode",
+          "title" : "Mode"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Microphone trigger sensor for audio activity",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "side" : "left"
+      },
+      "defaultLabel" : "Line Sensor",
+      "defaultPins" : [
+        "OUT",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity Line Tracking Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Track detection output",
+          "direction" : "output",
+          "name" : "OUT",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes track position",
+          "direction" : "input",
+          "name" : "Track Surface",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs on-line/off-line state",
+          "direction" : "output",
+          "name" : "Line Reading",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.line-tracker",
+      "kind" : "lineSensor",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "left",
+          "description" : "Sensor mount side",
+          "key" : "side",
+          "title" : "Side"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Reflectance sensor for rover line following",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "rangeM" : "4.0"
+      },
+      "defaultLabel" : "Ultrasonic Sensor",
+      "defaultPins" : [
+        "TRIG",
+        "ECHO",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity Ultrasonic Distance Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Trigger pulse",
+          "direction" : "input",
+          "name" : "TRIG",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Echo pulse",
+          "direction" : "output",
+          "name" : "ECHO",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Module power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes obstacle distance",
+          "direction" : "input",
+          "name" : "Distance",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs range signal",
+          "direction" : "output",
+          "name" : "Range Reading",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.ultrasonic",
+      "kind" : "distanceSensorModule",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "4.0",
+          "description" : "Maximum range in meters",
+          "key" : "rangeM",
+          "title" : "Range"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Distance measurement using trigger/echo pins",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "family" : "water-flow"
+      },
+      "defaultLabel" : "Water Flow Sensor",
+      "defaultPins" : [
+        "SIG",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity Water Flow Sensor",
+      "electricalInterfaces" : [
+        {
+          "description" : "Pulse output",
+          "direction" : "output",
+          "name" : "SIG",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Supply",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes flow rate from the world",
+          "direction" : "input",
+          "name" : "Fluid Flow",
+          "role" : "sensorWorldInput"
+        },
+        {
+          "description" : "Outputs pulse frequency proportional to flow",
+          "direction" : "output",
+          "name" : "Pulse Train",
+          "role" : "sensorReading"
+        }
+      ],
+      "groupTitle" : "DFRobot Sensors",
+      "id" : "dfrobot.gravity.water-flow",
+      "kind" : "digitalSensorModule",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "water-flow",
+          "description" : "Calibration family",
+          "key" : "family",
+          "title" : "Family"
+        }
+      ],
+      "sku" : "SEN0551",
+      "summary" : "Pulse output liquid flow sensor",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/SKU_SEN0551_Gravity_Water_Flow_Sensor_G3_4"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires I2C capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "address" : "0x3C"
+      },
+      "defaultLabel" : "OLED Display",
+      "defaultPins" : [
+        "SDA",
+        "SCL",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "Gravity OLED Display",
+      "electricalInterfaces" : [
+        {
+          "description" : "I2C bus",
+          "direction" : "bidirectional",
+          "name" : "SDA/SCL",
+          "signals" : [
+            "i2c"
+          ]
+        },
+        {
+          "description" : "Display power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Shows text and status from the board",
+          "direction" : "output",
+          "name" : "Display State",
+          "role" : "displayState"
+        }
+      ],
+      "groupTitle" : "DFRobot Modules",
+      "id" : "dfrobot.gravity.oled",
+      "kind" : "oledDisplay",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "0x3C",
+          "description" : "Display bus address",
+          "key" : "address",
+          "title" : "I2C Address"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Compact I2C status display",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "load" : "high-current"
+      },
+      "defaultLabel" : "16A Relay",
+      "defaultPins" : [
+        "IN",
+        "VCC",
+        "GND",
+        "NO",
+        "COM"
+      ],
+      "displayName" : "Gravity 16A Relay Module",
+      "electricalInterfaces" : [
+        {
+          "description" : "Digital trigger",
+          "direction" : "input",
+          "name" : "IN",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Logic power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        },
+        {
+          "description" : "Switched load circuit",
+          "direction" : "output",
+          "name" : "NO/COM",
+          "signals" : [
+            "switchedPower"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes digital control",
+          "direction" : "input",
+          "name" : "Control",
+          "role" : "controlSignal"
+        },
+        {
+          "description" : "Switches power to a load",
+          "direction" : "output",
+          "name" : "Switched Power",
+          "role" : "switchedPower"
+        }
+      ],
+      "groupTitle" : "DFRobot Modules",
+      "id" : "dfrobot.gravity.relay.16a",
+      "kind" : "relay",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "high-current",
+          "description" : "Expected load class",
+          "key" : "load",
+          "title" : "Load"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Relay for switching pumps, lamps, and higher-current loads",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital / PWM capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "family" : "tb6612"
+      },
+      "defaultLabel" : "TB6612 Driver",
+      "defaultPins" : [
+        "ENA",
+        "IN1",
+        "IN2",
+        "ENB",
+        "IN3",
+        "IN4",
+        "VM",
+        "GND",
+        "L+",
+        "L-",
+        "R+",
+        "R-"
+      ],
+      "displayName" : "Gravity TB6612 Motor Driver",
+      "electricalInterfaces" : [
+        {
+          "description" : "Channel enables",
+          "direction" : "input",
+          "name" : "ENA/ENB",
+          "signals" : [
+            "pwm",
+            "digital"
+          ]
+        },
+        {
+          "description" : "Direction inputs",
+          "direction" : "input",
+          "name" : "IN1-IN4",
+          "signals" : [
+            "digital"
+          ]
+        },
+        {
+          "description" : "Motor supply",
+          "direction" : "input",
+          "name" : "VM",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        },
+        {
+          "description" : "Motor outputs",
+          "direction" : "output",
+          "name" : "L+/L-/R+/R-",
+          "signals" : [
+            "motor"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes direction and PWM",
+          "direction" : "input",
+          "name" : "Control",
+          "role" : "controlSignal"
+        },
+        {
+          "description" : "Outputs left and right drive power",
+          "direction" : "output",
+          "name" : "Motor Power",
+          "role" : "actuatorPower"
+        }
+      ],
+      "groupTitle" : "DFRobot Motion",
+      "id" : "dfrobot.gravity.tb6612",
+      "kind" : "motorDriver",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "tb6612",
+          "description" : "Motor driver model",
+          "key" : "family",
+          "title" : "Driver Family"
+        }
+      ],
+      "sku" : "DRI0044-A",
+      "summary" : "Dual 1.2A DC motor driver with Gravity connectors",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/2x1.2A_DC_Motor_Driver_with_Gravity_Connector__TB6612FNG__SKU__DRI0044-A"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Motor capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "side" : "left"
+      },
+      "defaultLabel" : "DC Motor",
+      "defaultPins" : [
+        "+",
+        "-"
+      ],
+      "displayName" : "Gravity DC Motor / Pump",
+      "electricalInterfaces" : [
+        {
+          "description" : "Motor power input",
+          "direction" : "input",
+          "name" : "+/-",
+          "signals" : [
+            "motor"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes motor drive power",
+          "direction" : "input",
+          "name" : "Motor Power",
+          "role" : "actuatorPower"
+        },
+        {
+          "description" : "Produces wheel or pump motion",
+          "direction" : "output",
+          "name" : "Motion",
+          "role" : "motion"
+        }
+      ],
+      "groupTitle" : "DFRobot Motion",
+      "id" : "dfrobot.gravity.dc-motor",
+      "kind" : "motor",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "left",
+          "description" : "Left/right channel assignment",
+          "key" : "side",
+          "title" : "Side"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Load driven from a motor driver or switched power path",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires PWM capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "channel" : "grip"
+      },
+      "defaultLabel" : "Servo",
+      "defaultPins" : [
+        "SIG",
+        "VCC",
+        "GND"
+      ],
+      "displayName" : "DFRobot Servo",
+      "electricalInterfaces" : [
+        {
+          "description" : "PWM control input",
+          "direction" : "input",
+          "name" : "SIG",
+          "signals" : [
+            "pwm"
+          ]
+        },
+        {
+          "description" : "Servo power",
+          "direction" : "input",
+          "name" : "VCC",
+          "signals" : [
+            "power"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes PWM position control",
+          "direction" : "input",
+          "name" : "Control",
+          "role" : "controlSignal"
+        },
+        {
+          "description" : "Produces angular motion",
+          "direction" : "output",
+          "name" : "Motion",
+          "role" : "motion"
+        }
+      ],
+      "groupTitle" : "DFRobot Motion",
+      "id" : "dfrobot.gravity.servo",
+      "kind" : "servo",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "grip",
+          "description" : "Mechanism role",
+          "key" : "channel",
+          "title" : "Channel"
+        }
+      ],
+      "sku" : null,
+      "summary" : "PWM servo for hands, pan/tilt, and robotic mechanisms",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital / PWM capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "style" : "lamp"
+      },
+      "defaultLabel" : "RGB Lamp",
+      "defaultPins" : [
+        "R",
+        "G",
+        "B",
+        "GND"
+      ],
+      "displayName" : "Gravity RGB Lamp",
+      "electricalInterfaces" : [
+        {
+          "description" : "Color channel control",
+          "direction" : "input",
+          "name" : "R/G/B",
+          "signals" : [
+            "digital",
+            "pwm"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes color control",
+          "direction" : "input",
+          "name" : "Control",
+          "role" : "controlSignal"
+        },
+        {
+          "description" : "Produces lamp state",
+          "direction" : "output",
+          "name" : "Light",
+          "role" : "displayState"
+        }
+      ],
+      "groupTitle" : "DFRobot Outputs",
+      "id" : "dfrobot.gravity.rgb-led",
+      "kind" : "rgbLamp",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "lamp",
+          "description" : "Lamp styling variant",
+          "key" : "style",
+          "title" : "Style"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Three-channel lamp output",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    },
+    {
+      "compatibility" : [
+        {
+          "description" : "Validated for Arduino Uno and other {board}-class controllers using Gravity-compatible wiring",
+          "title" : "Board Support"
+        },
+        {
+          "description" : "Requires Digital / PWM capability on the host board",
+          "title" : "Signal Interface"
+        },
+        {
+          "description" : "Gravity modules commonly target 3.3V or 5V logic and keyed power wiring",
+          "title" : "Voltage"
+        }
+      ],
+      "defaultAttributes" : {
+        "voice" : "default"
+      },
+      "defaultLabel" : "Speaker",
+      "defaultPins" : [
+        "SIG",
+        "GND"
+      ],
+      "displayName" : "Gravity Speaker Module",
+      "electricalInterfaces" : [
+        {
+          "description" : "Audio drive input",
+          "direction" : "input",
+          "name" : "SIG",
+          "signals" : [
+            "digital",
+            "pwm"
+          ]
+        },
+        {
+          "description" : "Ground",
+          "direction" : "input",
+          "name" : "GND",
+          "signals" : [
+            "ground"
+          ]
+        }
+      ],
+      "functionalInterfaces" : [
+        {
+          "description" : "Consumes audio drive",
+          "direction" : "input",
+          "name" : "Control",
+          "role" : "controlSignal"
+        },
+        {
+          "description" : "Produces sound",
+          "direction" : "output",
+          "name" : "Audio",
+          "role" : "audio"
+        }
+      ],
+      "groupTitle" : "DFRobot Outputs",
+      "id" : "dfrobot.gravity.speaker",
+      "kind" : "speaker",
+      "simulationParameters" : [
+        {
+          "defaultValue" : "default",
+          "description" : "Host-side audio profile",
+          "key" : "voice",
+          "title" : "Voice Profile"
+        }
+      ],
+      "sku" : null,
+      "summary" : "Audio output module for alarms and assistant responses",
+      "vendor" : "dfrobot",
+      "wikiURL" : "https://wiki.dfrobot.com/topic-282/"
+    }
+  ]
+}

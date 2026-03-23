@@ -1,0 +1,51 @@
+{
+  "parts": [
+    {
+      "id": "board",
+      "kind": "board",
+      "label": "Arduino Uno",
+      "pins": ["D13", "GND", "5V"],
+      "position": { "x": 180, "y": 220 },
+      "attributes": { "footprint": "uno" },
+      "pinBindings": {}
+    },
+    {
+      "id": "r1",
+      "kind": "resistor",
+      "label": "220 ohm",
+      "pins": ["1", "2"],
+      "position": { "x": 420, "y": 160 },
+      "attributes": { "value": "220" },
+      "pinBindings": {}
+    },
+    {
+      "id": "led1",
+      "kind": "led",
+      "label": "Status LED",
+      "pins": ["A", "K"],
+      "position": { "x": 620, "y": 180 },
+      "attributes": { "color": "amber" },
+      "pinBindings": { "A": "D13", "K": "GND" }
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire-d13-r1",
+      "from": { "partId": "board", "pin": "D13" },
+      "to": { "partId": "r1", "pin": "1" },
+      "color": "green"
+    },
+    {
+      "id": "wire-r1-led",
+      "from": { "partId": "r1", "pin": "2" },
+      "to": { "partId": "led1", "pin": "A" },
+      "color": "green"
+    },
+    {
+      "id": "wire-led-gnd",
+      "from": { "partId": "led1", "pin": "K" },
+      "to": { "partId": "board", "pin": "GND" },
+      "color": "black"
+    }
+  ]
+}

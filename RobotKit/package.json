@@ -1,0 +1,12 @@
+{
+  "name": "robotkit-runtime",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:runtime": "node Scripts/build-runtime.mjs"
+  },
+  "dependencies": {
+    "avr8js": "^0.5.0",
+    "esbuild": "^0.25.10"
+  }
+}

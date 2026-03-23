@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "name": "RobotKit",
+  "runtime": "javaScriptCore",
+  "board": {
+    "id": "arduino-uno",
+    "displayName": "Arduino Uno",
+    "clockDescription": "16 MHz AVR"
+  },
+  "demo": {
+    "id": "uno-blink",
+    "name": "Uno Blink",
+    "binary": "blink.hex",
+    "source": "sketch.ino",
+    "observedPins": ["D13"]
+  },
+  "files": [
+    { "name": "project.json", "path": "project.json", "kind": "manifest" },
+    { "name": "diagram.robotkit.json", "path": "diagram.robotkit.json", "kind": "diagram" },
+    { "name": "sketch.ino", "path": "sketch.ino", "kind": "source" },
+    { "name": "blink.hex", "path": "blink.hex", "kind": "firmware" }
+  ],
+  "diagram": {
+    "parts": [],
+    "wires": []
+  }
+}
