@@ -24,7 +24,7 @@ struct RobotKitApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Project") {
-                    appModel.newProject()
+                    appModel.showProjects()
                 }
                 .keyboardShortcut("n", modifiers: [.command])
 

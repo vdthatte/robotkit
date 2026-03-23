@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct CodeEditorView: View {
     @ObservedObject var projectStore: ProjectStore
@@ -18,6 +19,12 @@ struct CodeEditorView: View {
                     }
                 }
                 Spacer()
+                Button("Hide Code") {
+                    projectStore.isCodeEditorVisible = false
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
                 Button("New Source File") {
                     appModel.addSourceFile()
                 }
@@ -31,14 +38,11 @@ struct CodeEditorView: View {
             if let file = projectStore.project.files.first(where: { $0.path == projectStore.selectedFilePath }) {
                 if file.kind == .source {
                     VStack(spacing: 0) {
-                        TextEditor(text: Binding(
+                        SourceCodeTextView(text: Binding(
                             get: { projectStore.sourceFiles[file.path] ?? "" },
                             set: { projectStore.selectFile(path: file.path); projectStore.updateSourceCode($0) }
                         ))
-                        .font(.system(.body, design: .monospaced))
-                        .padding(12)
                         .background(Color.black.opacity(0.92))
-                        .foregroundStyle(.white)
 
                         if simulator.buildDiagnostics.isEmpty == false {
                             Divider()
@@ -72,5 +76,77 @@ struct CodeEditorView: View {
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
+    }
+}
+
+private struct SourceCodeTextView: NSViewRepresentable {
+    @Binding var text: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSTextView.scrollableTextView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = true
+        scrollView.borderType = .noBorder
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 1)
+
+        guard let textView = scrollView.documentView as? NSTextView else {
+            return scrollView
+        }
+
+        textView.delegate = context.coordinator
+        textView.isRichText = false
+        textView.importsGraphics = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isContinuousSpellCheckingEnabled = false
+        textView.isGrammarCheckingEnabled = false
+        textView.isAutomaticDataDetectionEnabled = false
+        textView.isAutomaticLinkDetectionEnabled = false
+        textView.isAutomaticTextCompletionEnabled = false
+        textView.smartInsertDeleteEnabled = false
+        textView.allowsUndo = true
+        textView.usesFindBar = true
+        textView.isHorizontallyResizable = true
+        textView.isVerticallyResizable = true
+        textView.autoresizingMask = [.width]
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.font = .monospacedSystemFont(ofSize: 17, weight: .regular)
+        textView.textColor = .white
+        textView.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 1)
+        textView.insertionPointColor = .white
+        textView.textContainerInset = NSSize(width: 12, height: 12)
+        textView.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.textContainer?.widthTracksTextView = false
+        textView.string = text
+
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        if textView.string != text {
+            textView.string = text
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        @Binding var text: String
+
+        init(text: Binding<String>) {
+            _text = text
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            text = textView.string
+        }
     }
 }

@@ -199,7 +199,6 @@ struct UtilitySidebarView: View {
         case inspector
         case runtime
         case world
-        case console
 
         var id: String { rawValue }
 
@@ -211,8 +210,6 @@ struct UtilitySidebarView: View {
                 return "Runtime"
             case .world:
                 return "World"
-            case .console:
-                return "Console"
             }
         }
     }
@@ -240,8 +237,6 @@ struct UtilitySidebarView: View {
                     RuntimeStatusView(simulator: simulator)
                 case .world:
                     SimulationWorldView(projectStore: projectStore, simulator: simulator)
-                case .console:
-                    ConsoleView(simulator: simulator)
                 }
             }
         }

@@ -1,16 +1,40 @@
 import SwiftUI
 
 struct AddPartPaletteView: View {
+    enum CatalogScope: String, CaseIterable, Identifiable {
+        case all
+        case outputs
+        case sensors
+        case motion
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .all:
+                return "Parts"
+            case .outputs:
+                return "Outputs"
+            case .sensors:
+                return "Sensors"
+            case .motion:
+                return "Motion"
+            }
+        }
+    }
+
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var projectStore: ProjectStore
     @ObservedObject var appModel: AppModel
 
     @State private var selectedPartID: String?
     @State private var isCustomPartEditorPresented = false
+    @State private var selectedScope: CatalogScope = .all
 
     private var availableParts: [PartCatalogEntry] {
         PartCatalog.availableEntries(for: projectStore.project.board).filter { entry in
             let matchesBoardConstraint = entry.kind != .board || projectStore.project.parts.contains(where: { $0.kind == .board }) == false
+            let matchesScope = selectedScope.matches(entry.kind)
             let query = projectStore.partSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
             let matchesQuery = query.isEmpty
                 || entry.displayName.localizedCaseInsensitiveContains(query)
@@ -18,7 +42,7 @@ struct AddPartPaletteView: View {
                 || entry.groupTitle.localizedCaseInsensitiveContains(query)
                 || entry.vendor.displayName.localizedCaseInsensitiveContains(query)
                 || (entry.sku?.localizedCaseInsensitiveContains(query) ?? false)
-            return matchesBoardConstraint && matchesQuery
+            return matchesBoardConstraint && matchesScope && matchesQuery
         }
     }
 
@@ -86,10 +110,9 @@ struct AddPartPaletteView: View {
             }
 
             HStack(spacing: 12) {
-                chooserScopePill("Parts", isActive: true)
-                chooserScopePill("Outputs", isActive: false)
-                chooserScopePill("Sensors", isActive: false)
-                chooserScopePill("Motion", isActive: false)
+                ForEach(CatalogScope.allCases) { scope in
+                    chooserScopePill(scope)
+                }
                 Spacer()
                 Button("New Custom Part") {
                     isCustomPartEditorPresented = true
@@ -116,7 +139,7 @@ struct AddPartPaletteView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                chooserSectionTitle("Component Library")
+                chooserSectionTitle(sectionTitle)
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 156), spacing: 16)], spacing: 16) {
                     ForEach(availableParts) { entry in
@@ -243,16 +266,23 @@ struct AddPartPaletteView: View {
         }
     }
 
-    private func chooserScopePill(_ title: String, isActive: Bool) -> some View {
-        Text(title)
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                Capsule()
-                    .fill(isActive ? Color.accentColor : Color.white.opacity(0.05))
-            )
-            .foregroundStyle(isActive ? Color.white : Color.secondary)
+    private func chooserScopePill(_ scope: CatalogScope) -> some View {
+        let isActive = selectedScope == scope
+
+        return Button {
+            selectedScope = scope
+        } label: {
+            Text(scope.title)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(isActive ? Color.accentColor : Color.white.opacity(0.05))
+                )
+                .foregroundStyle(isActive ? Color.white : Color.secondary)
+        }
+        .buttonStyle(.plain)
     }
 
     private func chooserSectionTitle(_ title: String) -> some View {
@@ -264,6 +294,19 @@ struct AddPartPaletteView: View {
 
     private var selectedPart: PartCatalogEntry? {
         availableParts.first(where: { $0.id == selectedPartID })
+    }
+
+    private var sectionTitle: String {
+        switch selectedScope {
+        case .all:
+            return "Component Library"
+        case .outputs:
+            return "Output Components"
+        case .sensors:
+            return "Sensor Components"
+        case .motion:
+            return "Motion Components"
+        }
     }
 }
 
@@ -341,6 +384,21 @@ private extension PartKind {
             return "Components"
         case .digitalSensorModule, .analogSensorModule, .i2cSensorModule, .uartSensorModule, .visionSensorModule, .distanceSensorModule:
             return "DFRobot"
+        }
+    }
+}
+
+private extension AddPartPaletteView.CatalogScope {
+    func matches(_ kind: PartKind) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .outputs:
+            return kind.categoryTitle == "Outputs"
+        case .sensors:
+            return kind.categoryTitle == "Sensors" || kind.categoryTitle == "DFRobot"
+        case .motion:
+            return kind.categoryTitle == "Motion"
         }
     }
 }

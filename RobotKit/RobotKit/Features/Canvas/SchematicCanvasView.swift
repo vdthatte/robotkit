@@ -6,103 +6,69 @@ struct SchematicCanvasView: View {
     @ObservedObject var simulator: SimulatorViewModel
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            SchematicEditorRepresentable(
-                project: projectStore.project,
-                selectedPartID: $projectStore.selectedPartID,
-                selectedWireID: $projectStore.selectedWireID,
-                pinStates: simulator.pinStates,
-                pendingPlacementKind: projectStore.pendingPlacementKind,
-                pendingPlacementEntry: projectStore.pendingPlacementEntry,
-                placementPreviewPoint: projectStore.placementPreviewPoint,
-                activeButtonIDs: projectStore.activeButtonIDs,
-                zoom: projectStore.canvasZoom,
-                offset: projectStore.canvasOffset,
-                onBackgroundActivate: { point in
-                    projectStore.handleCanvasBackgroundActivation(at: point)
-                },
-                onPartActivate: { partID in
-                    projectStore.handleCanvasPartActivation(partID)
-                },
-                onWireActivate: { wireID in
-                    projectStore.handleCanvasWireActivation(wireID)
-                },
-                onPinSelect: { pin in
-                    projectStore.selectPart(id: pin.partID)
-                },
-                onWireCreate: { start, end in
-                    projectStore.createWire(from: start, to: end)
-                },
-                onPartMove: { partID, position in
-                    projectStore.movePart(id: partID, to: position)
-                },
-                onWireMidXMove: { wireID, midX in
-                    projectStore.updateWireMidX(wireID, to: midX)
-                },
-                onDeleteSelection: {
-                    projectStore.deleteSelection()
-                },
-                onDuplicateSelection: {
-                    projectStore.duplicateSelection()
-                },
-                onButtonPress: { partID, isPressed in
-                    projectStore.setButtonPressed(partID, isPressed: isPressed)
-                    guard simulator.isBootstrapped else { return }
-                    do {
-                        try simulator.synchronizeInputs(
-                            project: projectStore.project,
-                            activeButtons: projectStore.activeButtonIDs
-                        )
-                    } catch {
-                        NSLog("RobotKit input sync failed: %@", error.localizedDescription)
-                    }
-                },
-                onPlacementPreview: { point in
-                    projectStore.updatePlacementPreview(point)
-                },
-                onCancelPlacement: {
-                    projectStore.cancelPlacement()
-                },
-                onViewportChange: { zoom, offset in
-                    projectStore.setCanvasViewport(zoom: zoom, offset: offset)
-                },
-                onDropPartKind: { kind, point in
-                    projectStore.addPart(kind: kind, at: point)
+        SchematicEditorRepresentable(
+            project: projectStore.project,
+            selectedPartID: $projectStore.selectedPartID,
+            selectedWireID: $projectStore.selectedWireID,
+            pinStates: simulator.pinStates,
+            pendingPlacementKind: projectStore.pendingPlacementKind,
+            pendingPlacementEntry: projectStore.pendingPlacementEntry,
+            placementPreviewPoint: projectStore.placementPreviewPoint,
+            activeButtonIDs: projectStore.activeButtonIDs,
+            zoom: projectStore.canvasZoom,
+            offset: projectStore.canvasOffset,
+            onBackgroundActivate: { point in
+                projectStore.handleCanvasBackgroundActivation(at: point)
+            },
+            onPartActivate: { partID in
+                projectStore.handleCanvasPartActivation(partID)
+            },
+            onWireActivate: { wireID in
+                projectStore.handleCanvasWireActivation(wireID)
+            },
+            onPinSelect: { pin in
+                projectStore.selectPart(id: pin.partID)
+            },
+            onWireCreate: { start, end in
+                projectStore.createWire(from: start, to: end)
+            },
+            onPartMove: { partID, position in
+                projectStore.movePart(id: partID, to: position)
+            },
+            onWireMidXMove: { wireID, midX in
+                projectStore.updateWireMidX(wireID, to: midX)
+            },
+            onDeleteSelection: {
+                projectStore.deleteSelection()
+            },
+            onDuplicateSelection: {
+                projectStore.duplicateSelection()
+            },
+            onButtonPress: { partID, isPressed in
+                projectStore.setButtonPressed(partID, isPressed: isPressed)
+                guard simulator.isBootstrapped else { return }
+                do {
+                    try simulator.synchronizeInputs(
+                        project: projectStore.project,
+                        activeButtons: projectStore.activeButtonIDs
+                    )
+                } catch {
+                    NSLog("RobotKit input sync failed: %@", error.localizedDescription)
                 }
-            )
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(projectStore.project.name)
-                    .font(.largeTitle.weight(.bold))
-                    .foregroundStyle(.white)
-                Text("Dark canvas with pan, zoom, drag placement, hover pins, and schematic editing.")
-                    .font(.headline)
-                    .foregroundStyle(.white.opacity(0.78))
-                HStack(spacing: 12) {
-                    Text("Observed pins: \(projectStore.project.demo.observedPins.joined(separator: ", "))")
-                    Text("Zoom \(Int(projectStore.canvasZoom * 100))%")
-                }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.72))
-
-                if let pendingPlacementEntry = projectStore.pendingPlacementEntry {
-                    Text("Placement mode: click or drop on the canvas to place \(pendingPlacementEntry.displayName). Press Esc to cancel.")
-                        .font(.subheadline.weight(.medium))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.white.opacity(0.12), in: Capsule())
-                        .foregroundStyle(.white)
-                } else {
-                    Text("Drag from pin to pin to create wires, drag parts to move, Option-drag to pan, and press Delete to remove a selection.")
-                        .font(.subheadline.weight(.medium))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.white.opacity(0.12), in: Capsule())
-                        .foregroundStyle(.white)
-                }
+            },
+            onPlacementPreview: { point in
+                projectStore.updatePlacementPreview(point)
+            },
+            onCancelPlacement: {
+                projectStore.cancelPlacement()
+            },
+            onViewportChange: { zoom, offset in
+                projectStore.setCanvasViewport(zoom: zoom, offset: offset)
+            },
+            onDropPartKind: { kind, point in
+                projectStore.addPart(kind: kind, at: point)
             }
-            .padding(24)
-        }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -634,6 +600,8 @@ private final class SchematicEditorNSView: NSView {
                 .systemOrange
             } else if isActive {
                 .systemOrange
+            } else if usesLightCardPalette(for: part.kind) {
+                NSColor.black.withAlphaComponent(0.12)
             } else {
                 .white.withAlphaComponent(0.8)
             }
@@ -642,9 +610,9 @@ private final class SchematicEditorNSView: NSView {
             cardPath.lineWidth = isSelected ? 3 : (isPendingWireStart ? 3 : (isActive ? 2 : 1))
             cardPath.stroke()
 
-            let titleColor = part.kind == .board ? NSColor.white : NSColor.labelColor
-            let subtitleColor = part.kind == .board ? NSColor.white.withAlphaComponent(0.85) : NSColor.secondaryLabelColor
-            let pinColor = part.kind == .board ? NSColor.white.withAlphaComponent(0.72) : NSColor.tertiaryLabelColor
+            let titleColor = partTitleColor(for: part.kind)
+            let subtitleColor = partSubtitleColor(for: part.kind)
+            let pinColor = partPinSummaryColor(for: part.kind)
 
             drawText(part.kind.displayName, in: rect.insetBy(dx: 14, dy: 12), font: .systemFont(ofSize: 14, weight: .semibold), color: titleColor)
             drawText(part.label, in: rect.insetBy(dx: 14, dy: 34), font: .systemFont(ofSize: 12, weight: .regular), color: subtitleColor)
@@ -866,7 +834,7 @@ private final class SchematicEditorNSView: NSView {
                 pin,
                 in: NSRect(x: labelOriginX, y: pinPoint.y - 8, width: 48, height: 14),
                 font: .monospacedSystemFont(ofSize: 10, weight: .medium),
-                color: part.kind == .board ? .white.withAlphaComponent(0.85) : .secondaryLabelColor
+                color: pinLabelColor(for: part.kind)
             )
         }
     }
@@ -1101,6 +1069,26 @@ private final class SchematicEditorNSView: NSView {
         case .soilSensor, .lightSensor, .climateSensor, .microphone, .speaker, .rgbLamp, .lineSensor, .motor, .servo, .resistor, .button, .buzzer, .potentiometer, .digitalSensorModule, .analogSensorModule, .i2cSensorModule, .uartSensorModule, .visionSensorModule, .distanceSensorModule:
             return NSColor.white.withAlphaComponent(0.96)
         }
+    }
+
+    private func usesLightCardPalette(for kind: PartKind) -> Bool {
+        kind != .board
+    }
+
+    private func partTitleColor(for kind: PartKind) -> NSColor {
+        kind == .board ? .white : NSColor(calibratedWhite: 0.12, alpha: 0.96)
+    }
+
+    private func partSubtitleColor(for kind: PartKind) -> NSColor {
+        kind == .board ? .white.withAlphaComponent(0.85) : NSColor(calibratedWhite: 0.24, alpha: 0.92)
+    }
+
+    private func partPinSummaryColor(for kind: PartKind) -> NSColor {
+        kind == .board ? .white.withAlphaComponent(0.72) : NSColor(calibratedWhite: 0.34, alpha: 0.88)
+    }
+
+    private func pinLabelColor(for kind: PartKind) -> NSColor {
+        kind == .board ? .white.withAlphaComponent(0.85) : NSColor(calibratedWhite: 0.20, alpha: 0.94)
     }
 
     private func isPartActive(_ part: PartDefinition) -> Bool {

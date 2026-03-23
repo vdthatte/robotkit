@@ -4,21 +4,15 @@ struct SimulatorToolbarView: View {
     @ObservedObject var projectStore: ProjectStore
     @ObservedObject var simulator: SimulatorViewModel
     @ObservedObject var appModel: AppModel
-    let onShowProjects: () -> Void
-    let onShowTemplates: () -> Void
-    let onShowParts: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
             simulationControls
-            toolbarDivider
-            projectControls
-            toolbarDivider
-            projectIdentity
+            if projectStore.isConsoleVisible == false {
+                toolbarDivider
+                consoleControls
+            }
             Spacer()
-            statusBadge(simulator.loadedDemoName.isEmpty ? projectStore.project.name : simulator.loadedDemoName)
-            statusBadge(simulator.status.summary)
-            statusBadge(simulator.firmwareStatus)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -69,33 +63,11 @@ struct SimulatorToolbarView: View {
         }
     }
 
-    private var projectControls: some View {
+    private var consoleControls: some View {
         HStack(spacing: 8) {
-            toolbarCapsuleButton("Projects", systemName: "folder") {
-                onShowProjects()
+            toolbarCapsuleButton("Show Console", systemName: "terminal") {
+                projectStore.isConsoleVisible = true
             }
-
-            toolbarCapsuleButton("New", systemName: "plus") {
-                appModel.newProject()
-            }
-
-            toolbarCapsuleButton("Templates", systemName: "square.grid.2x2") {
-                onShowTemplates()
-            }
-
-            toolbarCapsuleButton("Parts", systemName: "cpu") {
-                onShowParts()
-            }
-        }
-    }
-
-    private var projectIdentity: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(projectStore.project.name)
-                .font(.headline)
-            Text(projectStore.project.board.displayName)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -138,12 +110,4 @@ struct SimulatorToolbarView: View {
         .help(accessibilityLabel)
     }
 
-    private func statusBadge(_ text: String) -> some View {
-        Text(text)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color.black.opacity(0.08), in: Capsule())
-    }
 }

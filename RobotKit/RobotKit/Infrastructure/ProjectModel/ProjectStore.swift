@@ -7,6 +7,8 @@ final class ProjectStore: ObservableObject {
     @Published var selectedPartID: String? = "board"
     @Published var selectedWireID: String?
     @Published var selectedFilePath = "sketch.ino"
+    @Published var isCodeEditorVisible = true
+    @Published var isConsoleVisible = true
     @Published var sourceFiles: [String: String] = [:]
     @Published var partSearchQuery = ""
     @Published var isPartPalettePresented = false
@@ -57,6 +59,8 @@ final class ProjectStore: ObservableObject {
         selectedPartID = "board"
         selectedWireID = nil
         selectedFilePath = project.demo.source
+        isCodeEditorVisible = true
+        isConsoleVisible = true
         sourceFiles = Self.loadInitialSourceFiles(for: project, workspaceURL: nil)
         pendingPlacementKind = nil
         pendingPlacementCatalogID = nil
@@ -76,6 +80,8 @@ final class ProjectStore: ObservableObject {
         selectedPartID = "board"
         selectedWireID = nil
         selectedFilePath = project.demo.source
+        isCodeEditorVisible = true
+        isConsoleVisible = true
         sourceFiles = generated.sourceFiles
         pendingPlacementKind = nil
         pendingPlacementCatalogID = nil
@@ -95,6 +101,8 @@ final class ProjectStore: ObservableObject {
         selectedPartID = project.parts.first?.id
         selectedWireID = nil
         selectedFilePath = project.demo.source
+        isCodeEditorVisible = true
+        isConsoleVisible = true
         sourceFiles = Self.loadInitialSourceFiles(for: project, workspaceURL: url)
         pendingPlacementKind = nil
         pendingPlacementCatalogID = nil
@@ -212,6 +220,7 @@ final class ProjectStore: ObservableObject {
 
     func selectFile(path: String) {
         selectedFilePath = path
+        isCodeEditorVisible = true
     }
 
     func addSourceFile() {
@@ -226,6 +235,7 @@ final class ProjectStore: ObservableObject {
         project.files.append(ProjectFile(name: candidate, path: candidate, kind: .source))
         sourceFiles[candidate] = "// \(candidate)\n"
         selectedFilePath = candidate
+        isCodeEditorVisible = true
         persist()
     }
 

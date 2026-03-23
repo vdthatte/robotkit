@@ -1,27 +1,42 @@
 import SwiftUI
 
 struct ConsoleView: View {
+    @ObservedObject var projectStore: ProjectStore
     @ObservedObject var simulator: SimulatorViewModel
     @State private var selectedPanel = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(simulator.status.summary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text("Console")
+                    .font(.headline)
+                Picker("", selection: $selectedPanel) {
+                    Text("Runtime Log").tag(0)
+                    Text("Serial").tag(1)
+                    Text("Build").tag(2)
+                }
+                .pickerStyle(.segmented)
+                .controlSize(.small)
+                .frame(width: 420)
                 Spacer()
-                Text(simulator.firmwareStatus)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Button {
+                    projectStore.isConsoleVisible = false
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .frame(width: 22, height: 22)
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.white.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+                .help("Hide Console")
             }
-
-            Picker("Console Panel", selection: $selectedPanel) {
-                Text("Runtime Log").tag(0)
-                Text("Serial").tag(1)
-                Text("Build").tag(2)
-            }
-            .pickerStyle(.segmented)
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 8) {
@@ -55,7 +70,9 @@ struct ConsoleView: View {
                 }
             }
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 

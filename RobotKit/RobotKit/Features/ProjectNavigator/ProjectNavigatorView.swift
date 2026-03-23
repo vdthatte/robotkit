@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ProjectNavigatorView: View {
     @ObservedObject var projectStore: ProjectStore
+    let onShowProjects: () -> Void
+    let onShowParts: () -> Void
 
     private var sourceFiles: [ProjectFile] {
         projectStore.project.files.filter { $0.kind == .source }
@@ -16,13 +18,59 @@ struct ProjectNavigatorView: View {
     }
 
     var body: some View {
-        List {
-            fileSection("Sources", files: sourceFiles)
-            fileSection("Project Data", files: projectFiles)
-            fileSection("Build Artifacts", files: artifactFiles)
+        VStack(spacing: 0) {
+            navigatorHeader
+            Divider()
+            List {
+                fileSection("Sources", files: sourceFiles)
+                fileSection("Project Data", files: projectFiles)
+                fileSection("Build Artifacts", files: artifactFiles)
+            }
+            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
         }
-        .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private var navigatorHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 10) {
+                Text(projectStore.project.name)
+                    .font(.title2.weight(.semibold))
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+                Menu {
+                    Button("Projects", systemImage: "folder") {
+                        onShowProjects()
+                    }
+                    Button("Parts", systemImage: "cpu") {
+                        onShowParts()
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold))
+                        .frame(width: 24, height: 24)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.white.opacity(0.06))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        )
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+            }
+            Text(projectStore.project.board.displayName)
+                .font(.headline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
