@@ -72,6 +72,7 @@ enum ProjectTemplateFactory {
             files: [
                 ProjectFile(name: "project.json", path: "project.json", kind: .manifest),
                 ProjectFile(name: "diagram.robotkit.json", path: "diagram.robotkit.json", kind: .diagram),
+                ProjectFile(name: "physical.robotkit.json", path: "physical.robotkit.json", kind: .physical),
                 ProjectFile(name: "sketch.ino", path: "sketch.ino", kind: .source),
                 ProjectFile(name: "helpers.h", path: "helpers.h", kind: .source),
                 ProjectFile(name: "blink.hex", path: "blink.hex", kind: .firmware)

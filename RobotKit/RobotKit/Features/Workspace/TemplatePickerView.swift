@@ -195,33 +195,13 @@ struct TemplatePickerView: View {
 }
 
 struct UtilitySidebarView: View {
-    enum Tab: String, CaseIterable, Identifiable {
-        case inspector
-        case runtime
-        case world
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .inspector:
-                return "Inspector"
-            case .runtime:
-                return "Runtime"
-            case .world:
-                return "World"
-            }
-        }
-    }
-
     @ObservedObject var projectStore: ProjectStore
     @ObservedObject var simulator: SimulatorViewModel
-    @State private var selectedTab: Tab = .inspector
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $selectedTab) {
-                ForEach(Tab.allCases) { tab in
+            Picker("", selection: $projectStore.selectedUtilitySidebarTab) {
+                ForEach(ProjectStore.UtilitySidebarTab.allCases) { tab in
                     Text(tab.title).tag(tab)
                 }
             }
@@ -230,13 +210,15 @@ struct UtilitySidebarView: View {
             .background(.bar)
 
             Group {
-                switch selectedTab {
+                switch projectStore.selectedUtilitySidebarTab {
                 case .inspector:
                     InspectorView(projectStore: projectStore, simulator: simulator)
                 case .runtime:
                     RuntimeStatusView(simulator: simulator)
                 case .world:
                     SimulationWorldView(projectStore: projectStore, simulator: simulator)
+                case .physical:
+                    PhysicalInspectorView(projectStore: projectStore)
                 }
             }
         }

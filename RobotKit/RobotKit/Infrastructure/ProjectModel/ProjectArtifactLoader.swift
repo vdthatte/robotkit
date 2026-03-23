@@ -33,6 +33,10 @@ enum ProjectArtifactLoader {
             if let url = bundle.url(forResource: filename, withExtension: fileExtension, subdirectory: subdirectory) {
                 return url
             }
+
+            if let url = bundle.url(forResource: filename, withExtension: fileExtension) {
+                return url
+            }
         }
 
         let fallback = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)

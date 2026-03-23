@@ -30,11 +30,13 @@ enum ProjectPersistenceService {
 
         let projectData = try encoder.encode(project)
         let diagramData = try encoder.encode(project.diagram)
+        let physicalData = try encoder.encode(project.physical)
 
         try projectData.write(to: bundleURL.appendingPathComponent("project.json"), options: .atomic)
         try diagramData.write(to: bundleURL.appendingPathComponent("diagram.robotkit.json"), options: .atomic)
+        try physicalData.write(to: bundleURL.appendingPathComponent("physical.robotkit.json"), options: .atomic)
 
-        for sourceFile in project.files where sourceFile.kind == .source {
+        for sourceFile in project.files where sourceFile.kind == .source || sourceFile.kind == .cad {
             try copyArtifactIfPresent(
                 named: sourceFile.path,
                 to: bundleURL,

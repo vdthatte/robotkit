@@ -17,6 +17,7 @@ const FLASH_WORDS = 32768;
 const FLASH_BYTES = FLASH_WORDS * 2;
 const CPU_HZ = 16_000_000;
 const TARGET_FPS = 30;
+const PERIPHERAL_TICK_INTERVAL = 64;
 const PORT_CONFIGS = {
   B: portBConfig,
   C: portCConfig,
@@ -187,13 +188,23 @@ class UnoRuntime {
 
     for (let step = 0; step < this.cyclesPerTick; step += 1) {
       avrInstruction(this.cpu);
-      this.applyExternalInputs();
-      for (const timer of Object.values(this.timers)) {
-        timer.tick();
+      if ((step & (PERIPHERAL_TICK_INTERVAL - 1)) === 0) {
+        this.applyExternalInputs();
+        for (const timer of Object.values(this.timers)) {
+          timer.tick();
+        }
+        if (this.usart) {
+          this.usart.tick();
+        }
       }
-      if (this.usart) {
-        this.usart.tick();
-      }
+    }
+
+    this.applyExternalInputs();
+    for (const timer of Object.values(this.timers)) {
+      timer.tick();
+    }
+    if (this.usart) {
+      this.usart.tick();
     }
 
     this.frame += 1;

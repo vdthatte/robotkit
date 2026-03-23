@@ -10,11 +10,11 @@ struct ProjectNavigatorView: View {
     }
 
     private var projectFiles: [ProjectFile] {
-        projectStore.project.files.filter { $0.kind == .manifest || $0.kind == .diagram }
+        projectStore.project.files.filter { $0.kind == .manifest || $0.kind == .diagram || $0.kind == .physical }
     }
 
     private var artifactFiles: [ProjectFile] {
-        projectStore.project.files.filter { $0.kind == .firmware }
+        projectStore.project.files.filter { $0.kind == .firmware || $0.kind == .cad }
     }
 
     var body: some View {
@@ -110,6 +110,10 @@ struct ProjectNavigatorView: View {
             return "shippingbox"
         case .diagram:
             return "point.3.connected.trianglepath.dotted"
+        case .physical:
+            return "cube.transparent"
+        case .cad:
+            return "cube"
         case .firmware:
             return "cpu"
         }

@@ -1084,6 +1084,7 @@ var global = globalThis;
   var FLASH_BYTES = FLASH_WORDS * 2;
   var CPU_HZ = 16e6;
   var TARGET_FPS = 30;
+  var PERIPHERAL_TICK_INTERVAL = 64;
   var PORT_CONFIGS = {
     B: portBConfig,
     C: portCConfig,
@@ -1232,13 +1233,22 @@ var global = globalThis;
       }
       for (let step = 0; step < this.cyclesPerTick; step += 1) {
         avrInstruction(this.cpu);
-        this.applyExternalInputs();
-        for (const timer of Object.values(this.timers)) {
-          timer.tick();
+        if ((step & PERIPHERAL_TICK_INTERVAL - 1) === 0) {
+          this.applyExternalInputs();
+          for (const timer of Object.values(this.timers)) {
+            timer.tick();
+          }
+          if (this.usart) {
+            this.usart.tick();
+          }
         }
-        if (this.usart) {
-          this.usart.tick();
-        }
+      }
+      this.applyExternalInputs();
+      for (const timer of Object.values(this.timers)) {
+        timer.tick();
+      }
+      if (this.usart) {
+        this.usart.tick();
       }
       this.frame += 1;
       return {

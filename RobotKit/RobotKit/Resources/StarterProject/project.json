@@ -17,6 +17,7 @@
   "files": [
     { "name": "project.json", "path": "project.json", "kind": "manifest" },
     { "name": "diagram.robotkit.json", "path": "diagram.robotkit.json", "kind": "diagram" },
+    { "name": "physical.robotkit.json", "path": "physical.robotkit.json", "kind": "physical" },
     { "name": "sketch.ino", "path": "sketch.ino", "kind": "source" },
     { "name": "blink.hex", "path": "blink.hex", "kind": "firmware" }
   ],

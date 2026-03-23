@@ -3,6 +3,44 @@ import Foundation
 
 @MainActor
 final class ProjectStore: ObservableObject {
+    enum UtilitySidebarTab: String, CaseIterable, Identifiable {
+        case inspector
+        case runtime
+        case world
+        case physical
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .inspector:
+                return "Inspector"
+            case .runtime:
+                return "Runtime"
+            case .world:
+                return "World"
+            case .physical:
+                return "Physical"
+            }
+        }
+    }
+
+    enum PhysicalCanvasMode: String, CaseIterable, Identifiable {
+        case isometric
+        case top
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .isometric:
+                return "3D"
+            case .top:
+                return "Top"
+            }
+        }
+    }
+
     @Published var project = ProjectBundleLoader.loadStarterProject()
     @Published var selectedPartID: String? = "board"
     @Published var selectedWireID: String?
@@ -18,6 +56,8 @@ final class ProjectStore: ObservableObject {
     @Published var activeButtonIDs: Set<String> = []
     @Published var canvasZoom = 1.0
     @Published var canvasOffset = CanvasPoint(x: 0, y: 0)
+    @Published var selectedUtilitySidebarTab: UtilitySidebarTab = .inspector
+    @Published var selectedPhysicalCanvasMode: PhysicalCanvasMode = .isometric
     @Published private(set) var workspaceURL: URL?
     @Published private(set) var lastSavedURL: URL?
     @Published private(set) var lastSaveError: String?
@@ -39,6 +79,15 @@ final class ProjectStore: ObservableObject {
     var pendingPlacementEntry: PartCatalogEntry? {
         PartCatalog.entry(id: pendingPlacementCatalogID)
             ?? pendingPlacementKind.flatMap { PartCatalog.defaultEntry(for: $0) }
+    }
+
+    var selectedPhysicalPlacement: PhysicalPartPlacement? {
+        guard let selectedPartID else { return nil }
+        return project.physical.placement(for: selectedPartID)
+    }
+
+    var isPhysicalModeActive: Bool {
+        selectedUtilitySidebarTab == .physical
     }
 
     init() {
@@ -69,6 +118,7 @@ final class ProjectStore: ObservableObject {
         partSearchQuery = ""
         canvasZoom = 1.0
         canvasOffset = CanvasPoint(x: 0, y: 0)
+        selectedUtilitySidebarTab = .inspector
         persist()
     }
 
@@ -90,6 +140,7 @@ final class ProjectStore: ObservableObject {
         partSearchQuery = ""
         canvasZoom = 1.0
         canvasOffset = CanvasPoint(x: 0, y: 0)
+        selectedUtilitySidebarTab = .inspector
         persist()
     }
 
@@ -110,6 +161,7 @@ final class ProjectStore: ObservableObject {
         activeButtonIDs = []
         canvasZoom = 1.0
         canvasOffset = CanvasPoint(x: 0, y: 0)
+        selectedUtilitySidebarTab = .inspector
         lastSaveError = nil
     }
 
@@ -163,6 +215,8 @@ final class ProjectStore: ObservableObject {
         )
 
         project.diagram.parts.append(part)
+        project.physical.synchronize(with: project.diagram.parts)
+        project.prepareForWorkspace()
         selectedPartID = part.id
         selectedWireID = nil
         pendingPlacementKind = nil
@@ -183,6 +237,8 @@ final class ProjectStore: ObservableObject {
         )
 
         project.diagram.parts.append(part)
+        project.physical.synchronize(with: project.diagram.parts)
+        project.prepareForWorkspace()
         selectedPartID = part.id
         selectedWireID = nil
         pendingPlacementCatalogID = nil
@@ -221,6 +277,10 @@ final class ProjectStore: ObservableObject {
     func selectFile(path: String) {
         selectedFilePath = path
         isCodeEditorVisible = true
+    }
+
+    func selectUtilitySidebarTab(_ tab: UtilitySidebarTab) {
+        selectedUtilitySidebarTab = tab
     }
 
     func addSourceFile() {
@@ -274,7 +334,12 @@ final class ProjectStore: ObservableObject {
     }
 
     func updateSourceCode(_ sourceCode: String) {
-        guard selectedFilePath.isEmpty == false else { return }
+        guard
+            selectedFilePath.isEmpty == false,
+            project.files.first(where: { $0.path == selectedFilePath })?.kind == .source
+        else {
+            return
+        }
         sourceFiles[selectedFilePath] = sourceCode
         persist()
     }
@@ -294,6 +359,70 @@ final class ProjectStore: ObservableObject {
     func updateSelectedWireColor(_ color: String) {
         guard let selectedWireID, let index = project.diagram.wires.firstIndex(where: { $0.id == selectedWireID }) else { return }
         project.diagram.wires[index].color = color
+        persist()
+    }
+
+    func movePhysicalPart(id: String, to position: CanvasPoint, shouldPersist: Bool = true) {
+        guard let index = project.physical.placements.firstIndex(where: { $0.partID == id }) else { return }
+        project.physical.placements[index].position = position
+        project.physical.enclosure = project.physical.enclosure.updatingToFit(project.physical.placements)
+        if project.physical.generatedArtifacts.enclosureSCAD.isEmpty == false {
+            project.physical.generateEnclosure()
+            project.prepareForWorkspace()
+        }
+        if shouldPersist {
+            persist()
+        }
+    }
+
+    func updateSelectedPhysicalFace(_ face: PhysicalFace) {
+        guard let selectedPartID, let index = project.physical.placements.firstIndex(where: { $0.partID == selectedPartID }) else { return }
+        project.physical.placements[index].face = face
+        persist()
+    }
+
+    func updateSelectedPhysicalMount(_ mount: PhysicalMountKind) {
+        guard let selectedPartID, let index = project.physical.placements.firstIndex(where: { $0.partID == selectedPartID }) else { return }
+        project.physical.placements[index].mount = mount
+        if mount != .standoff {
+            project.physical.placements[index].standoffHeight = 0
+        }
+        persist()
+    }
+
+    func updateSelectedPhysicalRotation(_ rotationDegrees: Double) {
+        guard let selectedPartID, let index = project.physical.placements.firstIndex(where: { $0.partID == selectedPartID }) else { return }
+        project.physical.placements[index].rotationDegrees = rotationDegrees
+        persist()
+    }
+
+    func updateSelectedPhysicalStandoffHeight(_ standoffHeight: Double) {
+        guard let selectedPartID, let index = project.physical.placements.firstIndex(where: { $0.partID == selectedPartID }) else { return }
+        project.physical.placements[index].standoffHeight = standoffHeight
+        persist()
+    }
+
+    func autoLayoutPhysical() {
+        project.physical.autoLayout(for: project.parts)
+        project.prepareForWorkspace()
+        persist()
+    }
+
+    func compactPhysicalLayout() {
+        project.physical.autoLayout(for: project.parts, compact: true)
+        project.prepareForWorkspace()
+        persist()
+    }
+
+    func exposePhysicalPorts() {
+        project.physical.autoLayout(for: project.parts, exposeConnectors: true)
+        project.prepareForWorkspace()
+        persist()
+    }
+
+    func generateEnclosure() {
+        project.physical.generateEnclosure()
+        project.prepareForWorkspace()
         persist()
     }
 
@@ -317,6 +446,8 @@ final class ProjectStore: ObservableObject {
 
         project.diagram.parts.remove(at: index)
         project.diagram.wires.removeAll { $0.from.partID == selectedPartID || $0.to.partID == selectedPartID }
+        project.physical.synchronize(with: project.diagram.parts)
+        project.prepareForWorkspace()
         self.selectedPartID = nil
         persist()
     }
@@ -338,6 +469,8 @@ final class ProjectStore: ObservableObject {
             pinBindings: part.pinBindings
         )
         project.diagram.parts.append(duplicated)
+        project.physical.synchronize(with: project.diagram.parts)
+        project.prepareForWorkspace()
         self.selectedPartID = duplicated.id
         self.selectedWireID = nil
         persist()
@@ -351,6 +484,11 @@ final class ProjectStore: ObservableObject {
             return formattedJSON(project)
         case .diagram:
             return formattedJSON(project.diagram)
+        case .physical:
+            return formattedJSON(project.physical)
+        case .cad:
+            return project.generatedTextArtifacts[file.path]
+                ?? "CAD artifact: \(file.name)\n\nGenerate enclosure output from Physical mode to populate this file."
         case .firmware:
             return "Firmware artifact: \(file.name)\n\nBuild and Run to regenerate this file from the current sketch."
         }
@@ -378,11 +516,12 @@ final class ProjectStore: ObservableObject {
 
     func persist(to destinationURL: URL? = nil) {
         do {
+            project.prepareForWorkspace()
             let savedURL = try ProjectPersistenceService.save(
                 project,
                 destinationURL: destinationURL ?? workspaceURL,
                 sourceWorkspaceURL: workspaceURL ?? lastSavedURL,
-                artifactOverrides: sourceFiles
+                artifactOverrides: sourceFiles.merging(project.generatedTextArtifacts) { _, generated in generated }
             )
             workspaceURL = savedURL
             lastSavedURL = savedURL

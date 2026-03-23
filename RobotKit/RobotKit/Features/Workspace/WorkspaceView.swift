@@ -23,8 +23,14 @@ struct WorkspaceView: View {
                 Divider()
                 VSplitView {
                     HSplitView {
-                        SchematicCanvasView(projectStore: projectStore, simulator: simulator)
-                            .frame(minWidth: 520, idealWidth: 760)
+                        Group {
+                            if projectStore.isPhysicalModeActive {
+                                PhysicalCanvasView(projectStore: projectStore)
+                            } else {
+                                SchematicCanvasView(projectStore: projectStore, simulator: simulator)
+                            }
+                        }
+                        .frame(minWidth: 520, idealWidth: 760)
                         if projectStore.isCodeEditorVisible {
                             CodeEditorView(projectStore: projectStore, simulator: simulator, appModel: appModel)
                                 .frame(minWidth: 420, idealWidth: 560)

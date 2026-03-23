@@ -24,6 +24,16 @@ enum ProjectBundleLoader {
         }
 
         project.diagram = diagram
+        if let physicalURL = resourceURL(
+            named: "physical.robotkit",
+            withExtension: "json",
+            subdirectory: "StarterProject"
+        ),
+        let physicalData = try? Data(contentsOf: physicalURL),
+        let physical = try? decoder.decode(RobotPhysicalDesign.self, from: physicalData) {
+            project.physical = physical
+        }
+        project.prepareForWorkspace()
         return project
     }
 
@@ -52,6 +62,13 @@ enum ProjectBundleLoader {
         }
 
         project.diagram = diagram
+        let workspacePhysicalURL = workspaceURL.appendingPathComponent("physical.robotkit.json")
+        if FileManager.default.fileExists(atPath: workspacePhysicalURL.path),
+           let physicalData = try? Data(contentsOf: workspacePhysicalURL),
+           let physical = try? decoder.decode(RobotPhysicalDesign.self, from: physicalData) {
+            project.physical = physical
+        }
+        project.prepareForWorkspace()
         return project
     }
 
@@ -81,6 +98,10 @@ enum ProjectBundleLoader {
 
         for bundle in candidateBundles {
             if let url = bundle.url(forResource: name, withExtension: extensionName, subdirectory: subdirectory) {
+                return url
+            }
+
+            if let url = bundle.url(forResource: name, withExtension: extensionName) {
                 return url
             }
         }

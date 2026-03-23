@@ -1,0 +1,71 @@
+{
+  "canvas": {
+    "grid": 20,
+    "height": 720,
+    "width": 1080
+  },
+  "enclosure": {
+    "center": {
+      "x": 445,
+      "y": 244
+    },
+    "depth": 56,
+    "height": 236,
+    "lidStyle": "snapFit",
+    "wallThickness": 3,
+    "width": 674
+  },
+  "generatedArtifacts": {
+    "enclosureSCAD": ""
+  },
+  "placements": [
+    {
+      "face": "internal",
+      "footprint": {
+        "depth": 18,
+        "height": 68,
+        "width": 100
+      },
+      "mount": "standoff",
+      "partID": "board",
+      "position": {
+        "x": 340,
+        "y": 260
+      },
+      "rotationDegrees": 0,
+      "standoffHeight": 8
+    },
+    {
+      "face": "front",
+      "footprint": {
+        "depth": 10,
+        "height": 10,
+        "width": 28
+      },
+      "mount": "adhesive",
+      "partID": "r1",
+      "position": {
+        "x": 520,
+        "y": 160
+      },
+      "rotationDegrees": 0,
+      "standoffHeight": 0
+    },
+    {
+      "face": "front",
+      "footprint": {
+        "depth": 14,
+        "height": 18,
+        "width": 18
+      },
+      "mount": "panel",
+      "partID": "led1",
+      "position": {
+        "x": 700,
+        "y": 160
+      },
+      "rotationDegrees": 0,
+      "standoffHeight": 0
+    }
+  ]
+}

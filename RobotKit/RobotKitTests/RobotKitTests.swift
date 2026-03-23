@@ -3,6 +3,8 @@ import Testing
 @testable import RobotKit
 
 struct RobotKitTests {
+    private static let runtimeTestGate = DispatchSemaphore(value: 1)
+
     @Test
     func starterProjectUsesJavaScriptCoreRuntime() {
         let starter = ProjectBundleLoader.loadStarterProject()
@@ -10,6 +12,8 @@ struct RobotKitTests {
         #expect(starter.board.id == "arduino-uno")
         #expect(starter.parts.count == 3)
         #expect(starter.diagram.wires.count == 3)
+        #expect(starter.files.contains(where: { $0.path == "physical.robotkit.json" && $0.kind == .physical }))
+        #expect(starter.physical.placements.count == starter.parts.count)
     }
 
     @Test
@@ -163,15 +167,59 @@ struct RobotKitTests {
         let store = ProjectStore()
         store.newProject(named: "Round Trip")
         store.addPart(kind: .button)
+        store.autoLayoutPhysical()
+        store.generateEnclosure()
         store.updateSourceCode("void setup() {}\nvoid loop() {}")
         store.saveAs(to: workspaceURL)
 
         let reloaded = try ProjectBundleLoader.loadProject(from: workspaceURL)
         let source = try ProjectArtifactLoader.loadTextFile(named: reloaded.demo.source, workspaceURL: workspaceURL)
+        let physicalFile = try ProjectArtifactLoader.loadTextFile(named: "physical.robotkit.json", workspaceURL: workspaceURL)
+        let enclosure = try ProjectArtifactLoader.loadTextFile(named: "enclosure.scad", workspaceURL: workspaceURL)
 
         #expect(reloaded.name == "Round Trip")
         #expect(reloaded.parts.contains(where: { $0.kind == .button }))
         #expect(source == "void setup() {}\nvoid loop() {}")
+        #expect(reloaded.physical.placements.contains(where: { $0.partID.hasPrefix("btn") }))
+        #expect(physicalFile.contains("\"placements\""))
+        #expect(enclosure.contains("RobotKit generated enclosure"))
+    }
+
+    @Test
+    func projectBundleLoaderSynthesizesPhysicalLayerForLegacyBundle() throws {
+        let workspaceURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("robotkit-legacy-\(UUID().uuidString).robotkit", isDirectory: true)
+        let starter = ProjectBundleLoader.loadStarterProject()
+
+        try ProjectPersistenceService.save(starter, destinationURL: workspaceURL)
+        try FileManager.default.removeItem(at: workspaceURL.appendingPathComponent("physical.robotkit.json"))
+
+        let reloaded = try ProjectBundleLoader.loadProject(from: workspaceURL)
+
+        #expect(reloaded.parts.count == reloaded.physical.placements.count)
+        #expect(reloaded.files.contains(where: { $0.path == "physical.robotkit.json" && $0.kind == .physical }))
+    }
+
+    @Test
+    func physicalFootprintSupportsExplicitPerPartDimensions() {
+        let part = PartDefinition(
+            id: "sensor1",
+            kind: .distanceSensorModule,
+            label: "Distance Sensor",
+            pins: ["TRIG", "ECHO", "VCC", "GND"],
+            position: CanvasPoint(x: 100, y: 100),
+            attributes: [
+                "physical.widthMm": "71.5",
+                "physical.heightMm": "26",
+                "physical.depthMm": "19.25"
+            ],
+            pinBindings: [:]
+        )
+
+        let footprint = PhysicalFootprint.resolved(for: part)
+
+        #expect(footprint == PhysicalFootprint(width: 71.5, height: 26, depth: 19.25))
+        #expect(PhysicalFootprint.usesExplicitDimensions(for: part))
     }
 
     @Test
@@ -283,6 +331,9 @@ struct RobotKitTests {
 
     @Test
     func javaScriptRuntimeBootsAndStepsBlinkDemo() throws {
+        Self.runtimeTestGate.wait()
+        defer { Self.runtimeTestGate.signal() }
+
         let starter = ProjectBundleLoader.loadStarterProject()
         let firmwareHex = try ProjectArtifactLoader.loadTextFile(named: starter.demo.binary)
         let runtime = JavaScriptRuntimeHost()
@@ -308,6 +359,9 @@ struct RobotKitTests {
 
     @Test
     func javaScriptRuntimeEmitsAlternatingSerialForBlinkDemo() throws {
+        Self.runtimeTestGate.wait()
+        defer { Self.runtimeTestGate.signal() }
+
         let starter = ProjectBundleLoader.loadStarterProject()
         let firmwareHex = try ProjectArtifactLoader.loadTextFile(named: starter.demo.binary)
         let runtime = JavaScriptRuntimeHost()
@@ -319,8 +373,12 @@ struct RobotKitTests {
         _ = try runtime.bootstrap()
         _ = try runtime.loadProject(starter, firmwareHex: firmwareHex)
 
-        for _ in 0..<80 {
+        for _ in 0..<240 {
             _ = try runtime.stepFrame()
+            if serialEvents.contains(where: { $0.text.contains("RobotKit D13 HIGH") }) &&
+                serialEvents.contains(where: { $0.text.contains("RobotKit D13 LOW") }) {
+                break
+            }
         }
 
         #expect(serialEvents.contains(where: { $0.text.contains("RobotKit D13 HIGH") }))
@@ -330,6 +388,9 @@ struct RobotKitTests {
     @Test
     @MainActor
     func simulatorViewModelEmitsAlternatingSerialForBlinkDemo() async throws {
+        Self.runtimeTestGate.wait()
+        defer { Self.runtimeTestGate.signal() }
+
         let starter = ProjectBundleLoader.loadStarterProject()
         let simulator = SimulatorViewModel()
 
@@ -353,6 +414,9 @@ struct RobotKitTests {
 
     @Test
     func locallyCompiledFirmwareEmitsAlternatingSerialForBlinkDemo() throws {
+        Self.runtimeTestGate.wait()
+        defer { Self.runtimeTestGate.signal() }
+
         let starter = ProjectBundleLoader.loadStarterProject()
         let workspaceURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("robotkit-local-compile-\(UUID().uuidString).robotkit", isDirectory: true)
