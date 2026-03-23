@@ -396,6 +396,18 @@ final class ProjectStore: ObservableObject {
         persist()
     }
 
+    func rotateSelectedPhysical(by deltaDegrees: Double) {
+        guard let current = selectedPhysicalPlacement?.rotationDegrees else { return }
+        var next = current + deltaDegrees
+        while next < 0 {
+            next += 360
+        }
+        while next >= 360 {
+            next -= 360
+        }
+        updateSelectedPhysicalRotation(next)
+    }
+
     func updateSelectedPhysicalStandoffHeight(_ standoffHeight: Double) {
         guard let selectedPartID, let index = project.physical.placements.firstIndex(where: { $0.partID == selectedPartID }) else { return }
         project.physical.placements[index].standoffHeight = standoffHeight

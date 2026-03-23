@@ -3,10 +3,17 @@ import SwiftUI
 struct PhysicalCanvasView: View {
     @ObservedObject var projectStore: ProjectStore
     @State private var dragOrigins: [String: CanvasPoint] = [:]
+    @State private var orbitYawDegrees = -36.0
+    @State private var orbitPitchFactor = 0.50
+    @State private var cameraZoom = 1.0
+    @State private var cameraPan = CGSize.zero
+    @State private var orbitDragStart: CameraOrbitState?
 
     private let canvasPadding: CGFloat = 24
-    private let isometricXFactor = 0.82
-    private let isometricYFactor = 0.42
+    private let minimumPitchFactor = 0.24
+    private let maximumPitchFactor = 0.78
+    private let minimumCameraZoom = 0.55
+    private let maximumCameraZoom = 2.2
 
     var body: some View {
         VStack(spacing: 0) {
@@ -96,14 +103,19 @@ struct PhysicalCanvasView: View {
 
     private func isometricCanvas(in proxy: GeometryProxy) -> some View {
         let enclosure = projectStore.project.physical.enclosure
-        let scale = isometricScale(for: enclosure, in: proxy.size)
-        let origin = CGPoint(x: proxy.size.width * 0.5, y: proxy.size.height * 0.74)
+        let scale = isometricScale(for: enclosure, in: proxy.size) * cameraZoom
+        let origin = CGPoint(
+            x: proxy.size.width * 0.5 + cameraPan.width,
+            y: proxy.size.height * 0.74 + cameraPan.height
+        )
         let sortedPlacements = projectStore.project.physical.placements.sorted {
             ($0.position.x + $0.position.y) < ($1.position.x + $1.position.y)
         }
 
         return ZStack(alignment: .topLeading) {
             backgroundShell
+                .contentShape(Rectangle())
+                .gesture(orbitGesture())
 
             isometricGuidePlane(
                 enclosure: enclosure,
@@ -119,6 +131,18 @@ struct PhysicalCanvasView: View {
 
             isometricEnvelopeBadge(enclosure: enclosure)
                 .padding(18)
+
+            cameraHUD
+                .padding(18)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+
+            if let selectedPart = projectStore.selectedPart,
+               projectStore.selectedPhysicalPlacement != nil {
+                selectionHUD(for: selectedPart)
+                    .padding(.trailing, 18)
+                    .padding(.top, 144)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            }
 
             footerBadge
                 .padding(.horizontal, 18)
@@ -153,6 +177,107 @@ struct PhysicalCanvasView: View {
         }
         .buttonStyle(.bordered)
         .controlSize(.small)
+    }
+
+    private var cameraHUD: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Navigate 3D")
+                .font(.caption.weight(.semibold))
+
+            Text("Drag empty space to orbit")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                hudButton("minus.magnifyingglass") {
+                    cameraZoom = (cameraZoom - 0.12).clamped(to: minimumCameraZoom...maximumCameraZoom)
+                }
+                hudButton("arrow.up.left.and.arrow.down.right") {
+                    resetCamera()
+                }
+                hudButton("plus.magnifyingglass") {
+                    cameraZoom = (cameraZoom + 0.12).clamped(to: minimumCameraZoom...maximumCameraZoom)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Orbit")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    hudButton("rotate.left") {
+                        orbitYawDegrees -= 12
+                    }
+                    hudButton("arrow.up") {
+                        orbitPitchFactor = (orbitPitchFactor + 0.05).clamped(to: minimumPitchFactor...maximumPitchFactor)
+                    }
+                    hudButton("rotate.right") {
+                        orbitYawDegrees += 12
+                    }
+                    hudButton("arrow.down") {
+                        orbitPitchFactor = (orbitPitchFactor - 0.05).clamped(to: minimumPitchFactor...maximumPitchFactor)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Pan")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    hudButton("arrow.left") {
+                        cameraPan.width -= 28
+                    }
+                    hudButton("arrow.up") {
+                        cameraPan.height -= 28
+                    }
+                    hudButton("arrow.down") {
+                        cameraPan.height += 28
+                    }
+                    hudButton("arrow.right") {
+                        cameraPan.width += 28
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func selectionHUD(for part: PartDefinition) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Selected Part")
+                .font(.caption.weight(.semibold))
+            Text(part.label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            HStack(spacing: 8) {
+                hudButton("rotate.left") {
+                    projectStore.rotateSelectedPhysical(by: -90)
+                }
+                hudButton("rotate.right") {
+                    projectStore.rotateSelectedPhysical(by: 90)
+                }
+            }
+        }
+        .padding(12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func hudButton(_ systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 28, height: 28)
+        }
+        .buttonStyle(.plain)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
     }
 
     private func gridLayer(scale: Double) -> some View {
@@ -410,6 +535,34 @@ struct PhysicalCanvasView: View {
             }
     }
 
+    private func orbitGesture() -> some Gesture {
+        DragGesture(minimumDistance: 2)
+            .onChanged { value in
+                if orbitDragStart == nil {
+                    orbitDragStart = CameraOrbitState(
+                        yawDegrees: orbitYawDegrees,
+                        pitchFactor: orbitPitchFactor
+                    )
+                }
+
+                guard let start = orbitDragStart else { return }
+                orbitYawDegrees = start.yawDegrees + Double(value.translation.width) * 0.16
+                orbitPitchFactor = (start.pitchFactor - Double(value.translation.height) * 0.0016)
+                    .clamped(to: minimumPitchFactor...maximumPitchFactor)
+            }
+            .onEnded { _ in
+                orbitDragStart = nil
+            }
+    }
+
+    private func resetCamera() {
+        orbitYawDegrees = -36
+        orbitPitchFactor = 0.50
+        cameraZoom = 1.0
+        cameraPan = .zero
+        orbitDragStart = nil
+    }
+
     private var footerBadge: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Generated from circuit parts")
@@ -451,19 +604,22 @@ struct PhysicalCanvasView: View {
         scale: Double,
         origin: CGPoint
     ) -> CGPoint {
-        let dx = (x - center.x) * scale
-        let dy = (y - center.y) * scale
+        let yaw = orbitYawDegrees * .pi / 180
+        let dx = x - center.x
+        let dy = y - center.y
+        let rotatedX = (dx * cos(yaw)) - (dy * sin(yaw))
+        let rotatedY = (dx * sin(yaw)) + (dy * cos(yaw))
         let dz = z * scale
 
         return CGPoint(
-            x: origin.x + CGFloat((dx - dy) * isometricXFactor),
-            y: origin.y + CGFloat((dx + dy) * isometricYFactor - (dz * 0.92))
+            x: origin.x + CGFloat(rotatedX * scale),
+            y: origin.y + CGFloat((rotatedY * scale * orbitPitchFactor) - (dz * 0.92))
         )
     }
 
     private func isometricScale(for enclosure: PhysicalEnclosure, in size: CGSize) -> Double {
-        let horizontal = max(1, Double(size.width - canvasPadding * 2) / ((enclosure.width + enclosure.height) * 0.9))
-        let vertical = max(1, Double(size.height - canvasPadding * 2) / ((enclosure.width + enclosure.height) * 0.42 + enclosure.depth * 1.2))
+        let horizontal = max(1, Double(size.width - canvasPadding * 2) / (max(enclosure.width, enclosure.height) * 1.65))
+        let vertical = max(1, Double(size.height - canvasPadding * 2) / ((enclosure.width + enclosure.height) * 0.34 + enclosure.depth * 1.2))
         return min(horizontal, vertical)
     }
 
@@ -481,13 +637,12 @@ struct PhysicalCanvasView: View {
     }
 
     private func isometricDelta(for translation: CGSize, scale: Double) -> CanvasPoint {
-        let tx = Double(translation.width)
-        let ty = Double(translation.height)
-        let xComponent = tx / (2 * isometricXFactor * scale)
-        let yComponent = ty / (2 * isometricYFactor * scale)
+        let yaw = orbitYawDegrees * .pi / 180
+        let rotatedX = Double(translation.width) / scale
+        let rotatedY = Double(translation.height) / (scale * orbitPitchFactor)
         return CanvasPoint(
-            x: xComponent + yComponent,
-            y: yComponent - xComponent
+            x: (rotatedX * cos(yaw)) + (rotatedY * sin(yaw)),
+            y: -(rotatedX * sin(yaw)) + (rotatedY * cos(yaw))
         )
     }
 
@@ -523,6 +678,11 @@ private struct PolygonShape: Shape {
         path.closeSubpath()
         return path
     }
+}
+
+private struct CameraOrbitState {
+    let yawDegrees: Double
+    let pitchFactor: Double
 }
 
 private extension Double {
