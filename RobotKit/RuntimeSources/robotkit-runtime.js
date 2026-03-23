@@ -2,15 +2,21 @@ import {
   CPU,
   avrInstruction,
   AVRIOPort,
+  AVRTimer,
   AVRUSART,
   portBConfig,
   portCConfig,
   portDConfig,
+  timer0Config,
+  timer1Config,
+  timer2Config,
   usart0Config
 } from "avr8js";
 
 const FLASH_WORDS = 32768;
 const FLASH_BYTES = FLASH_WORDS * 2;
+const CPU_HZ = 16_000_000;
+const TARGET_FPS = 30;
 const PORT_CONFIGS = {
   B: portBConfig,
   C: portCConfig,
@@ -79,8 +85,9 @@ class UnoRuntime {
     this.host = host;
     this.cpu = null;
     this.ports = {};
+    this.timers = {};
     this.usart = null;
-    this.cyclesPerTick = 40_000;
+    this.cyclesPerTick = Math.floor(CPU_HZ / TARGET_FPS);
     this.frame = 0;
     this.loaded = false;
     this.pinState = new Map();
@@ -115,6 +122,11 @@ class UnoRuntime {
       C: new AVRIOPort(this.cpu, portCConfig),
       D: new AVRIOPort(this.cpu, portDConfig)
     };
+    this.timers = {
+      timer0: new AVRTimer(this.cpu, timer0Config),
+      timer1: new AVRTimer(this.cpu, timer1Config),
+      timer2: new AVRTimer(this.cpu, timer2Config)
+    };
     for (const portName of Object.keys(this.ports)) {
       this.ports[portName].addListener((value) => this.handlePortChange(portName, value));
     }
@@ -144,6 +156,7 @@ class UnoRuntime {
     this.loaded = false;
     this.cpu = null;
     this.ports = {};
+    this.timers = {};
     this.usart = null;
     this.frame = 0;
     this.pinState.clear();
@@ -175,6 +188,9 @@ class UnoRuntime {
     for (let step = 0; step < this.cyclesPerTick; step += 1) {
       avrInstruction(this.cpu);
       this.applyExternalInputs();
+      for (const timer of Object.values(this.timers)) {
+        timer.tick();
+      }
       if (this.usart) {
         this.usart.tick();
       }

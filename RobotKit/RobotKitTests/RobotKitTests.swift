@@ -307,6 +307,77 @@ struct RobotKitTests {
     }
 
     @Test
+    func javaScriptRuntimeEmitsAlternatingSerialForBlinkDemo() throws {
+        let starter = ProjectBundleLoader.loadStarterProject()
+        let firmwareHex = try ProjectArtifactLoader.loadTextFile(named: starter.demo.binary)
+        let runtime = JavaScriptRuntimeHost()
+        var serialEvents: [RuntimeSerialEvent] = []
+
+        runtime.onSerialWrite = { serialEvents.append($0) }
+        runtime.onLog = { _ in }
+
+        _ = try runtime.bootstrap()
+        _ = try runtime.loadProject(starter, firmwareHex: firmwareHex)
+
+        for _ in 0..<80 {
+            _ = try runtime.stepFrame()
+        }
+
+        #expect(serialEvents.contains(where: { $0.text.contains("RobotKit D13 HIGH") }))
+        #expect(serialEvents.contains(where: { $0.text.contains("RobotKit D13 LOW") }))
+    }
+
+    @Test
+    @MainActor
+    func simulatorViewModelEmitsAlternatingSerialForBlinkDemo() async throws {
+        let starter = ProjectBundleLoader.loadStarterProject()
+        let simulator = SimulatorViewModel()
+
+        await simulator.bootstrapIfNeeded()
+        simulator.start(project: starter, workspaceURL: nil)
+
+        let deadline = Date().addingTimeInterval(4)
+        while Date() < deadline {
+            if simulator.serialLines.contains(where: { $0.contains("RobotKit D13 HIGH") }) &&
+                simulator.serialLines.contains(where: { $0.contains("RobotKit D13 LOW") }) {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+
+        simulator.stop()
+
+        #expect(simulator.serialLines.contains(where: { $0.contains("RobotKit D13 HIGH") }))
+        #expect(simulator.serialLines.contains(where: { $0.contains("RobotKit D13 LOW") }))
+    }
+
+    @Test
+    func locallyCompiledFirmwareEmitsAlternatingSerialForBlinkDemo() throws {
+        let starter = ProjectBundleLoader.loadStarterProject()
+        let workspaceURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("robotkit-local-compile-\(UUID().uuidString).robotkit", isDirectory: true)
+
+        try ProjectPersistenceService.save(starter, destinationURL: workspaceURL)
+        let firmware = try FirmwareBuildService.prepareFirmware(for: starter, workspaceURL: workspaceURL)
+        let runtime = JavaScriptRuntimeHost()
+        var serialEvents: [RuntimeSerialEvent] = []
+
+        runtime.onSerialWrite = { serialEvents.append($0) }
+        runtime.onLog = { _ in }
+
+        _ = try runtime.bootstrap()
+        _ = try runtime.loadProject(starter, firmwareHex: firmware.hex)
+
+        for _ in 0..<80 {
+            _ = try runtime.stepFrame()
+        }
+
+        #expect(firmware.source == .compiled || firmware.source == .existingArtifact)
+        #expect(serialEvents.contains(where: { $0.text.contains("RobotKit D13 HIGH") }))
+        #expect(serialEvents.contains(where: { $0.text.contains("RobotKit D13 LOW") }))
+    }
+
+    @Test
     func customPartDraftCreatesCatalogBackedEntry() {
         var draft = CustomPartDraft()
         draft.displayName = "Capacitive Water Probe"

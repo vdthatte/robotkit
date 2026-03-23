@@ -111,6 +111,7 @@ final class SimulatorViewModel: ObservableObject {
     private var motorVelocity: [String: Double] = [:]
     private var servoAngles: [String: Double] = [:]
     private var speakerLevel: Double = 0
+    private var frameStepInFlight = false
 
     init() {
         runtime.onLog = { [weak self] message in
@@ -199,6 +200,7 @@ final class SimulatorViewModel: ObservableObject {
         motorVelocity = [:]
         servoAngles = [:]
         speakerLevel = 0
+        frameStepInFlight = false
         refreshToolchainStatus()
         workspaceSummary = workspaceURL?.lastPathComponent ?? "Current workspace"
 
@@ -227,6 +229,7 @@ final class SimulatorViewModel: ObservableObject {
 
     func stop() {
         stopTimer()
+        frameStepInFlight = false
         status = .stopped
         appendLog("[runtime] Simulation loop stopped")
     }
@@ -234,6 +237,7 @@ final class SimulatorViewModel: ObservableObject {
     func pause() {
         guard isRunning else { return }
         stopTimer()
+        frameStepInFlight = false
         status = .paused
         appendLog("[runtime] Simulation loop paused")
     }
@@ -261,19 +265,30 @@ final class SimulatorViewModel: ObservableObject {
             return
         }
         stopTimer()
-        do {
-            let frame = try runtime.stepFrame()
-            frameCount = frame.frame
-            totalCycles = frame.cycles
-            recordSignalSample()
-            refreshWorldSnapshot()
-            if let currentProject {
-                try synchronizeInputs(project: currentProject, activeButtons: currentActiveButtons)
+        guard frameStepInFlight == false else { return }
+        frameStepInFlight = true
+        runtime.stepFrameAsync { [weak self] result in
+            guard let self else { return }
+            self.frameStepInFlight = false
+            switch result {
+            case .success(let frame):
+                self.frameCount = frame.frame
+                self.totalCycles = frame.cycles
+                self.recordSignalSample()
+                self.refreshWorldSnapshot()
+                do {
+                    if let currentProject = self.currentProject {
+                        try self.synchronizeInputs(project: currentProject, activeButtons: self.currentActiveButtons)
+                    }
+                    self.status = .paused
+                } catch {
+                    self.status = .failed(error.localizedDescription)
+                    self.appendLog("[runtime] Input sync failed: \(error.localizedDescription)")
+                }
+            case .failure(let error):
+                self.status = .failed(error.localizedDescription)
+                self.appendLog("[runtime] Frame step failed: \(error.localizedDescription)")
             }
-            status = .paused
-        } catch {
-            status = .failed(error.localizedDescription)
-            appendLog("[runtime] Frame step failed: \(error.localizedDescription)")
         }
     }
 
@@ -322,20 +337,36 @@ final class SimulatorViewModel: ObservableObject {
 
     private func advanceOneFrame() {
         guard isRunning else { return }
-
-        do {
-            let frame = try runtime.stepFrame()
-            frameCount = frame.frame
-            totalCycles = frame.cycles
-            refreshWorldSnapshot()
-            if let currentProject {
-                try synchronizeInputs(project: currentProject, activeButtons: currentActiveButtons)
+        guard frameStepInFlight == false else { return }
+        frameStepInFlight = true
+        runtime.stepFrameAsync { [weak self] result in
+            guard let self else { return }
+            self.frameStepInFlight = false
+            switch result {
+            case .success(let frame):
+                self.frameCount = frame.frame
+                self.totalCycles = frame.cycles
+                self.recordSignalSample()
+                self.refreshWorldSnapshot()
+                do {
+                    if let currentProject = self.currentProject, self.requiresContinuousInputSync(for: currentProject) {
+                        try self.synchronizeInputs(project: currentProject, activeButtons: self.currentActiveButtons)
+                    }
+                } catch {
+                    self.stopTimer()
+                    self.status = .failed(error.localizedDescription)
+                    self.appendLog("[runtime] Input sync failed: \(error.localizedDescription)")
+                }
+            case .failure(let error):
+                self.stopTimer()
+                self.status = .failed(error.localizedDescription)
+                self.appendLog("[runtime] Frame step failed: \(error.localizedDescription)")
             }
-        } catch {
-            stopTimer()
-            status = .failed(error.localizedDescription)
-            appendLog("[runtime] Frame step failed: \(error.localizedDescription)")
         }
+    }
+
+    private func requiresContinuousInputSync(for project: RobotProject) -> Bool {
+        project.parts.contains { $0.kind == .lineSensor }
     }
 
     private func appendLog(_ line: String) {

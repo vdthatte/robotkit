@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ConsoleView: View {
     @ObservedObject var projectStore: ProjectStore
@@ -38,25 +39,11 @@ struct ConsoleView: View {
                 .help("Hide Console")
             }
 
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 8) {
-                    if activeLines.isEmpty {
-                        Text(emptyStateText)
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(Array(activeLines.enumerated()), id: \.offset) { _, line in
-                            Text(line)
-                                .font(.system(.body, design: .monospaced))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(12)
+            ConsoleTextView(
+                text: activeLines.isEmpty ? emptyStateText : activeLines.joined(separator: "\n"),
+                textColor: nsPanelColor
+            )
             .background(.black.opacity(0.88), in: RoundedRectangle(cornerRadius: 12))
-            .foregroundStyle(panelColor)
 
             if simulator.pinStates.isEmpty == false {
                 HStack(spacing: 12) {
@@ -98,6 +85,17 @@ struct ConsoleView: View {
         }
     }
 
+    private var nsPanelColor: NSColor {
+        switch selectedPanel {
+        case 1:
+            return .systemCyan
+        case 2:
+            return .systemOrange
+        default:
+            return .systemGreen
+        }
+    }
+
     private var activeLines: [String] {
         switch selectedPanel {
         case 1:
@@ -106,6 +104,57 @@ struct ConsoleView: View {
             return simulator.buildDiagnostics
         default:
             return simulator.logs
+        }
+    }
+}
+
+private struct ConsoleTextView: NSViewRepresentable {
+    let text: String
+    let textColor: NSColor
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSTextView.scrollableTextView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = true
+        scrollView.borderType = .noBorder
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = NSColor(calibratedWhite: 0.03, alpha: 1)
+
+        guard let textView = scrollView.documentView as? NSTextView else {
+            return scrollView
+        }
+
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.isRichText = false
+        textView.importsGraphics = false
+        textView.font = .monospacedSystemFont(ofSize: 15, weight: .regular)
+        textView.backgroundColor = NSColor(calibratedWhite: 0.03, alpha: 1)
+        textView.textColor = textColor
+        textView.textContainerInset = NSSize(width: 12, height: 12)
+        textView.isHorizontallyResizable = true
+        textView.isVerticallyResizable = true
+        textView.autoresizingMask = [.width]
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.textContainer?.widthTracksTextView = false
+        textView.string = text
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        if textView.string != text {
+            let documentMaxY = (scrollView.documentView?.bounds.maxY) ?? 0
+            let isNearBottom = scrollView.contentView.bounds.maxY >= (documentMaxY - 40)
+            textView.string = text
+            textView.textColor = textColor
+            if isNearBottom {
+                textView.scrollToEndOfDocument(nil)
+            }
+        } else {
+            textView.textColor = textColor
         }
     }
 }

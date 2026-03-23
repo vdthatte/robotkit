@@ -733,6 +733,183 @@ var global = globalThis;
     cpu.pc = addr;
   }
 
+  // node_modules/avr8js/dist/esm/timer.js
+  var timer01Dividers = {
+    0: 0,
+    1: 1,
+    2: 8,
+    3: 64,
+    4: 256,
+    5: 1024,
+    6: 0,
+    7: 0
+    // TODO: External clock source on T0 pin. Clock on rising edge.
+  };
+  var WGM_NORMAL = 0;
+  var WGM_PWM_PHASE_CORRECT = 1;
+  var WGM_CTC = 2;
+  var WGM_FASTPWM = 3;
+  var TOV = 1;
+  var OCFA = 2;
+  var OCFB = 4;
+  var TOIE = 1;
+  var OCIEA = 2;
+  var OCIEB = 4;
+  var timer0Config = {
+    bits: 8,
+    captureInterrupt: 0,
+    compAInterrupt: 28,
+    compBInterrupt: 30,
+    ovfInterrupt: 32,
+    TIFR: 53,
+    OCRA: 71,
+    OCRB: 72,
+    ICR: 0,
+    TCNT: 70,
+    TCCRA: 68,
+    TCCRB: 69,
+    TCCRC: 0,
+    TIMSK: 110,
+    dividers: timer01Dividers
+  };
+  var timer1Config = {
+    bits: 16,
+    captureInterrupt: 20,
+    compAInterrupt: 22,
+    compBInterrupt: 24,
+    ovfInterrupt: 26,
+    TIFR: 54,
+    OCRA: 136,
+    OCRB: 138,
+    ICR: 134,
+    TCNT: 132,
+    TCCRA: 128,
+    TCCRB: 129,
+    TCCRC: 130,
+    TIMSK: 111,
+    dividers: timer01Dividers
+  };
+  var timer2Config = {
+    bits: 8,
+    captureInterrupt: 0,
+    compAInterrupt: 14,
+    compBInterrupt: 16,
+    ovfInterrupt: 18,
+    TIFR: 55,
+    OCRA: 179,
+    OCRB: 180,
+    ICR: 0,
+    TCNT: 178,
+    TCCRA: 176,
+    TCCRB: 177,
+    TCCRC: 0,
+    TIMSK: 112,
+    dividers: {
+      0: 1,
+      1: 1,
+      2: 8,
+      3: 32,
+      4: 64,
+      5: 128,
+      6: 256,
+      7: 1024
+    }
+  };
+  var AVRTimer = class {
+    constructor(cpu, config) {
+      this.cpu = cpu;
+      this.config = config;
+      this.mask = (1 << this.config.bits) - 1;
+      this.lastCycle = 0;
+      this.ocrA = 0;
+      this.ocrB = 0;
+      cpu.writeHooks[config.TCNT] = (value) => {
+        this.TCNT = value;
+        this.timerUpdated(value);
+        return true;
+      };
+      cpu.writeHooks[config.OCRA] = (value) => {
+        this.ocrA = value;
+      };
+      cpu.writeHooks[config.OCRB] = (value) => {
+        this.ocrB = value;
+      };
+    }
+    reset() {
+      this.lastCycle = 0;
+      this.ocrA = 0;
+      this.ocrB = 0;
+    }
+    get TIFR() {
+      return this.cpu.data[this.config.TIFR];
+    }
+    set TIFR(value) {
+      this.cpu.data[this.config.TIFR] = value;
+    }
+    get TCNT() {
+      return this.cpu.data[this.config.TCNT];
+    }
+    set TCNT(value) {
+      this.cpu.data[this.config.TCNT] = value;
+    }
+    get TCCRA() {
+      return this.cpu.data[this.config.TCCRA];
+    }
+    get TCCRB() {
+      return this.cpu.data[this.config.TCCRB];
+    }
+    get TIMSK() {
+      return this.cpu.data[this.config.TIMSK];
+    }
+    get CS() {
+      return this.TCCRB & 7;
+    }
+    get WGM() {
+      return (this.TCCRB & 8) >> 1 | this.TCCRA & 3;
+    }
+    tick() {
+      const divider = this.config.dividers[this.CS];
+      const delta = this.cpu.cycles - this.lastCycle;
+      if (divider && delta >= divider) {
+        const counterDelta = Math.floor(delta / divider);
+        this.lastCycle += counterDelta * divider;
+        const val = this.TCNT;
+        const newVal = val + counterDelta & this.mask;
+        this.TCNT = newVal;
+        this.timerUpdated(newVal);
+        if ((this.WGM === WGM_NORMAL || this.WGM === WGM_PWM_PHASE_CORRECT || this.WGM === WGM_FASTPWM) && val > newVal) {
+          this.TIFR |= TOV;
+        }
+      }
+      if (this.cpu.interruptsEnabled) {
+        if (this.TIFR & TOV && this.TIMSK & TOIE) {
+          avrInterrupt(this.cpu, this.config.ovfInterrupt);
+          this.TIFR &= ~TOV;
+        }
+        if (this.TIFR & OCFA && this.TIMSK & OCIEA) {
+          avrInterrupt(this.cpu, this.config.compAInterrupt);
+          this.TIFR &= ~OCFA;
+        }
+        if (this.TIFR & OCFB && this.TIMSK & OCIEB) {
+          avrInterrupt(this.cpu, this.config.compBInterrupt);
+          this.TIFR &= ~OCFB;
+        }
+      }
+    }
+    timerUpdated(value) {
+      if (this.ocrA && value === this.ocrA) {
+        this.TIFR |= OCFA;
+        if (this.WGM === WGM_CTC) {
+          this.TCNT = 0;
+          this.TIFR |= TOV;
+        }
+      }
+      if (this.ocrB && value === this.ocrB) {
+        this.TIFR |= OCFB;
+      }
+    }
+  };
+
   // node_modules/avr8js/dist/esm/gpio.js
   var portBConfig = {
     PIN: 35,
@@ -905,6 +1082,8 @@ var global = globalThis;
   // RuntimeSources/robotkit-runtime.js
   var FLASH_WORDS = 32768;
   var FLASH_BYTES = FLASH_WORDS * 2;
+  var CPU_HZ = 16e6;
+  var TARGET_FPS = 30;
   var PORT_CONFIGS = {
     B: portBConfig,
     C: portCConfig,
@@ -961,8 +1140,9 @@ var global = globalThis;
       this.host = host;
       this.cpu = null;
       this.ports = {};
+      this.timers = {};
       this.usart = null;
-      this.cyclesPerTick = 4e4;
+      this.cyclesPerTick = Math.floor(CPU_HZ / TARGET_FPS);
       this.frame = 0;
       this.loaded = false;
       this.pinState = /* @__PURE__ */ new Map();
@@ -993,6 +1173,11 @@ var global = globalThis;
         C: new AVRIOPort(this.cpu, portCConfig),
         D: new AVRIOPort(this.cpu, portDConfig)
       };
+      this.timers = {
+        timer0: new AVRTimer(this.cpu, timer0Config),
+        timer1: new AVRTimer(this.cpu, timer1Config),
+        timer2: new AVRTimer(this.cpu, timer2Config)
+      };
       for (const portName of Object.keys(this.ports)) {
         this.ports[portName].addListener((value) => this.handlePortChange(portName, value));
       }
@@ -1020,6 +1205,7 @@ var global = globalThis;
       this.loaded = false;
       this.cpu = null;
       this.ports = {};
+      this.timers = {};
       this.usart = null;
       this.frame = 0;
       this.pinState.clear();
@@ -1047,6 +1233,9 @@ var global = globalThis;
       for (let step = 0; step < this.cyclesPerTick; step += 1) {
         avrInstruction(this.cpu);
         this.applyExternalInputs();
+        for (const timer of Object.values(this.timers)) {
+          timer.tick();
+        }
         if (this.usart) {
           this.usart.tick();
         }

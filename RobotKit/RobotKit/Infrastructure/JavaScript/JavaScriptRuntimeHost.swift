@@ -35,6 +35,7 @@ final class JavaScriptRuntimeHost {
     var onPinChanged: ((RuntimePinEvent) -> Void)?
     var onSerialWrite: ((RuntimeSerialEvent) -> Void)?
 
+    private let queue = DispatchQueue(label: "graam.robotkit.javascript-runtime")
     private var context: JSContext?
     private let runtimeScriptURL: URL?
     private let decoder = JSONDecoder()
@@ -50,91 +51,95 @@ final class JavaScriptRuntimeHost {
     }
 
     func bootstrap() throws -> RuntimeBootInfo {
-        let context = JSContext()
-        context?.exceptionHandler = { _, exception in
-            if let exception {
-                NSLog("RobotKit JS exception: %@", exception.toString())
-            }
-        }
-
-        guard let context else {
-            throw JavaScriptRuntimeError.contextUnavailable
-        }
-
-        let bridge = HostBridge(
-            onLog: { [weak self] message in
-                self?.onLog?(message)
-            },
-            onPinChanged: { [weak self] payload in
-                guard
-                    let self,
-                    let data = payload.data(using: .utf8),
-                    let event = try? self.decoder.decode(RuntimePinEvent.self, from: data)
-                else {
-                    return
+        try queue.sync {
+            let context = JSContext()
+            context?.exceptionHandler = { _, exception in
+                if let exception {
+                    NSLog("RobotKit JS exception: %@", exception.toString())
                 }
-                self.onPinChanged?(event)
-            },
-            onSerialWrite: { [weak self] payload in
-                guard
-                    let self,
-                    let data = payload.data(using: .utf8),
-                    let event = try? self.decoder.decode(RuntimeSerialEvent.self, from: data)
-                else {
-                    return
+            }
+
+            guard let context else {
+                throw JavaScriptRuntimeError.contextUnavailable
+            }
+
+            let bridge = HostBridge(
+                onLog: { [weak self] message in
+                    self?.onLog?(message)
+                },
+                onPinChanged: { [weak self] payload in
+                    guard
+                        let self,
+                        let data = payload.data(using: .utf8),
+                        let event = try? self.decoder.decode(RuntimePinEvent.self, from: data)
+                    else {
+                        return
+                    }
+                    self.onPinChanged?(event)
+                },
+                onSerialWrite: { [weak self] payload in
+                    guard
+                        let self,
+                        let data = payload.data(using: .utf8),
+                        let event = try? self.decoder.decode(RuntimeSerialEvent.self, from: data)
+                    else {
+                        return
+                    }
+                    self.onSerialWrite?(event)
                 }
-                self.onSerialWrite?(event)
-            }
-        )
-
-        context.setObject(bridge, forKeyedSubscript: "robotKitHost" as NSString)
-
-        guard
-            let runtimeScriptURL,
-            let runtimeScript = try? String(contentsOf: runtimeScriptURL, encoding: .utf8)
-        else {
-            throw JavaScriptRuntimeError.runtimeBundleMissing
-        }
-
-        self.context = context
-        context.evaluateScript(runtimeScript)
-        do {
-            let result = try invoke(function: "boot")
-
-            guard result["ok"] as? Bool == true else {
-                throw JavaScriptRuntimeError.bootstrapFailed
-            }
-
-            let bootInfo = RuntimeBootInfo(
-                engineNames: result["engines"] as? [String] ?? [],
-                runtimeName: result["runtime"] as? String ?? "Unknown",
-                transport: result["transport"] as? String ?? "Unknown"
             )
 
-            self.isBootstrapped = true
-            self.lastBootInfo = bootInfo
-            return bootInfo
-        } catch {
-            self.context = nil
-            self.isBootstrapped = false
-            self.lastBootInfo = nil
-            throw error
+            context.setObject(bridge, forKeyedSubscript: "robotKitHost" as NSString)
+
+            guard
+                let runtimeScriptURL,
+                let runtimeScript = try? String(contentsOf: runtimeScriptURL, encoding: .utf8)
+            else {
+                throw JavaScriptRuntimeError.runtimeBundleMissing
+            }
+
+            self.context = context
+            context.evaluateScript(runtimeScript)
+            do {
+                let result = try self.invoke(function: "boot")
+
+                guard result["ok"] as? Bool == true else {
+                    throw JavaScriptRuntimeError.bootstrapFailed
+                }
+
+                let bootInfo = RuntimeBootInfo(
+                    engineNames: result["engines"] as? [String] ?? [],
+                    runtimeName: result["runtime"] as? String ?? "Unknown",
+                    transport: result["transport"] as? String ?? "Unknown"
+                )
+
+                self.isBootstrapped = true
+                self.lastBootInfo = bootInfo
+                return bootInfo
+            } catch {
+                self.context = nil
+                self.isBootstrapped = false
+                self.lastBootInfo = nil
+                throw error
+            }
         }
     }
 
     func loadProject(_ project: RobotProject, firmwareHex: String) throws -> RuntimeLoadInfo {
-        let payload = RuntimeProjectLoadRequest(project: project)
-        let jsonData = try encoder.encode(payload)
-        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-            throw JavaScriptRuntimeError.invocationFailed("Failed to encode project payload")
-        }
+        try queue.sync {
+            let payload = RuntimeProjectLoadRequest(project: project)
+            let jsonData = try encoder.encode(payload)
+            guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+                throw JavaScriptRuntimeError.invocationFailed("Failed to encode project payload")
+            }
 
-        let result = try invoke(function: "loadProject", arguments: [jsonString, firmwareHex])
-        return RuntimeLoadInfo(
-            boardID: result["board"] as? String ?? "unknown",
-            programBytes: result["programBytes"] as? Int ?? 0,
-            demoID: result["demo"] as? String ?? project.demo.id
-        )
+            let result = try invoke(function: "loadProject", arguments: [jsonString, firmwareHex])
+            return RuntimeLoadInfo(
+                boardID: result["board"] as? String ?? "unknown",
+                programBytes: result["programBytes"] as? Int ?? 0,
+                demoID: result["demo"] as? String ?? project.demo.id
+            )
+        }
     }
 
     func stepFrame() throws -> RuntimeFrameInfo {
@@ -145,12 +150,26 @@ final class JavaScriptRuntimeHost {
         )
     }
 
+    func stepFrameAsync(_ completion: @escaping (Result<RuntimeFrameInfo, Error>) -> Void) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            let result = Result { try self.stepFrame() }
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
+    }
+
     func reset() throws {
-        _ = try invoke(function: "reset")
+        try queue.sync {
+            _ = try invoke(function: "reset")
+        }
     }
 
     func setInputPin(_ pin: String, value: Int?) throws {
-        _ = try invoke(function: "setInputPin", arguments: [pin, value as Any])
+        try queue.sync {
+            _ = try invoke(function: "setInputPin", arguments: [pin, value as Any])
+        }
     }
 
     private func invoke(function name: String, arguments: [Any] = []) throws -> [String: Any] {
