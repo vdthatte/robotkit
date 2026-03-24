@@ -13,6 +13,7 @@ struct SimulatorToolbarView: View {
                 consoleControls
             }
             Spacer()
+            CanvasModePicker(projectStore: projectStore, showsBackground: false)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

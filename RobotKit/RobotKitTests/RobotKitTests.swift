@@ -137,6 +137,33 @@ struct RobotKitTests {
     }
 
     @Test
+    @MainActor
+    func projectStoreSeparatesCanvasModeFromSidebarSelection() {
+        let store = ProjectStore()
+
+        #expect(store.selectedCanvasMode == .schematic)
+        #expect(store.selectedUtilitySidebarTab == .inspector)
+
+        store.selectCanvasMode(.physical)
+        #expect(store.selectedCanvasMode == .physical)
+        #expect(store.selectedUtilitySidebarTab == .physical)
+
+        store.selectUtilitySidebarTab(.runtime)
+        #expect(store.selectedCanvasMode == .physical)
+        #expect(store.selectedUtilitySidebarTab == .runtime)
+
+        store.selectCanvasMode(.schematic)
+        #expect(store.selectedCanvasMode == .schematic)
+        #expect(store.selectedUtilitySidebarTab == .runtime)
+
+        store.selectUtilitySidebarTab(.physical)
+        #expect(store.selectedCanvasMode == .physical)
+
+        store.selectCanvasMode(.schematic)
+        #expect(store.selectedUtilitySidebarTab == .inspector)
+    }
+
+    @Test
     func partCatalogContainsDFRobotMotorDriverMetadata() throws {
         let entry = try #require(PartCatalog.entry(id: "dfrobot.gravity.tb6612"))
         #expect(entry.vendor == .dfrobot)

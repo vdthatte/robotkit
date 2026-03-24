@@ -1,44 +1,21 @@
 import RealityKit
 import SwiftUI
 
+private let breadboardSurfaceWidthMm = 320.0
+private let breadboardSurfaceHeightMm = 180.0
+private let workbenchDeskWidthMm = 560.0
+private let workbenchDeskDepthMm = 380.0
+private let breadboardPitchMm = 2.54
+private let breadboardTerminalRowOffsetsMm: [Double] = [-16.51, -13.97, -11.43, -8.89, -6.35, 6.35, 8.89, 11.43, 13.97, 16.51]
+private let breadboardRailRowOffsetsMm: [Double] = [-31.75, -26.67, 26.67, 31.75]
+
 struct PhysicalCanvasView: View {
     @ObservedObject var projectStore: ProjectStore
     @ObservedObject var simulator: SimulatorViewModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            content
-        }
-        .background(Color(nsColor: .windowBackgroundColor))
-    }
-
-    private var header: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("RealityKit Workbench")
-                    .font(.headline)
-                Text("Orbit around the physical scene and watch components react to simulator state.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            actionButton("Auto-layout", systemName: "wand.and.stars") {
-                projectStore.autoLayoutPhysical()
-            }
-            actionButton("Compact This", systemName: "rectangle.compress.vertical") {
-                projectStore.compactPhysicalLayout()
-            }
-            actionButton("Expose Ports", systemName: "arrow.up.forward.app") {
-                projectStore.exposePhysicalPorts()
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(.bar)
+        content
+            .background(Color(nsColor: .windowBackgroundColor))
     }
 
     @ViewBuilder
@@ -58,15 +35,6 @@ struct PhysicalCanvasView: View {
             .background(Color(nsColor: .underPageBackgroundColor))
         }
     }
-
-    private func actionButton(_ title: String, systemName: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemName)
-                .font(.subheadline.weight(.medium))
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-    }
 }
 
 @available(macOS 15.0, *)
@@ -74,73 +42,70 @@ private struct RealityKitWorkbenchScene: View {
     @ObservedObject var projectStore: ProjectStore
     @ObservedObject var simulator: SimulatorViewModel
     @State private var controller = WorkbenchSceneController()
-    @State private var navigation = WorkbenchNavigationState()
+    @State private var navigation = WorkbenchNavigationState.top
     @State private var dragStartNavigation: WorkbenchNavigationState?
     @State private var magnifyStartZoom: Double?
     @State private var pendingWireStart: PinReference?
+    @State private var viewportSize: CGSize = .zero
+    @State private var partDragSession: WorkbenchPartDragSession?
+    @State private var transientPartPositions: [String: CanvasPoint] = [:]
 
     var body: some View {
-        RealityView { content in
-            controller.install(
-                into: &content,
-                project: projectStore.project,
-                selectedPartID: projectStore.selectedPartID,
-                selectedWireID: projectStore.selectedWireID,
-                pinStates: simulator.pinStates,
-                activeButtons: projectStore.activeButtonIDs,
-                snapshot: simulator.worldSnapshot,
-                frameCount: simulator.frameCount,
-                navigation: navigation,
-                pendingWireStart: pendingWireStart
-            )
-        } update: { content in
-            controller.update(
-                content: &content,
-                project: projectStore.project,
-                selectedPartID: projectStore.selectedPartID,
-                selectedWireID: projectStore.selectedWireID,
-                pinStates: simulator.pinStates,
-                activeButtons: projectStore.activeButtonIDs,
-                snapshot: simulator.worldSnapshot,
-                frameCount: simulator.frameCount,
-                navigation: navigation,
-                pendingWireStart: pendingWireStart
-            )
-        } placeholder: {
-            ZStack {
-                Color(nsColor: .underPageBackgroundColor)
-                ProgressView()
-            }
-        }
-        .simultaneousGesture(selectionGesture)
-        .gesture(orbitGesture)
-        .simultaneousGesture(magnifyGesture)
-        .overlay(alignment: .topLeading) {
-            WorkbenchHUD(
-                projectStore: projectStore,
-                simulator: simulator,
-                pendingWireStart: pendingWireStart,
-                onResetView: { navigation = .default },
-                onTopView: { navigation = .top },
-                onFrontView: { navigation = .front },
-                onZoomIn: { navigation.zoom = (navigation.zoom * 1.18).clamped(to: WorkbenchNavigationState.zoomRange) },
-                onZoomOut: { navigation.zoom = (navigation.zoom / 1.18).clamped(to: WorkbenchNavigationState.zoomRange) },
-                onCancelWire: { pendingWireStart = nil }
-            )
-                .padding(18)
-        }
-        .overlay(alignment: .topTrailing) {
-            if let selectedPart = projectStore.selectedPart {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(selectedPart.label)
-                        .font(.caption.weight(.semibold))
-                    Text(selectedPart.kind.displayName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        GeometryReader { proxy in
+            RealityView { content in
+                controller.install(
+                    into: &content,
+                    project: projectStore.project,
+                    selectedPartID: projectStore.selectedPartID,
+                    selectedWireID: projectStore.selectedWireID,
+                    pinStates: simulator.pinStates,
+                    activeButtons: projectStore.activeButtonIDs,
+                    snapshot: simulator.worldSnapshot,
+                    frameCount: simulator.frameCount,
+                    navigation: navigation,
+                    pendingWireStart: pendingWireStart,
+                    transientPartPositions: transientPartPositions
+                )
+            } update: { content in
+                controller.update(
+                    content: &content,
+                    project: projectStore.project,
+                    selectedPartID: projectStore.selectedPartID,
+                    selectedWireID: projectStore.selectedWireID,
+                    pinStates: simulator.pinStates,
+                    activeButtons: projectStore.activeButtonIDs,
+                    snapshot: simulator.worldSnapshot,
+                    frameCount: simulator.frameCount,
+                    navigation: navigation,
+                    pendingWireStart: pendingWireStart,
+                    transientPartPositions: transientPartPositions
+                )
+            } placeholder: {
+                ZStack {
+                    Color(nsColor: .underPageBackgroundColor)
+                    ProgressView()
                 }
-                .padding(12)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-                .padding(18)
+            }
+            .task(id: proxy.size) {
+                viewportSize = proxy.size
+            }
+            .simultaneousGesture(selectionGesture)
+            .simultaneousGesture(partDragGesture)
+            .gesture(orbitGesture)
+            .simultaneousGesture(magnifyGesture)
+            .overlay(alignment: .topTrailing) {
+                if let selectedPart = projectStore.selectedPart {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(selectedPart.label)
+                            .font(.caption.weight(.semibold))
+                        Text(selectedPart.kind.displayName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(12)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                    .padding(18)
+                }
             }
         }
     }
@@ -148,6 +113,7 @@ private struct RealityKitWorkbenchScene: View {
     private var orbitGesture: some Gesture {
         DragGesture(minimumDistance: 2)
             .onChanged { value in
+                guard partDragSession == nil else { return }
                 if dragStartNavigation == nil {
                     dragStartNavigation = navigation
                 }
@@ -172,6 +138,37 @@ private struct RealityKitWorkbenchScene: View {
             }
             .onEnded { _ in
                 magnifyStartZoom = nil
+            }
+    }
+
+    private var partDragGesture: some Gesture {
+        DragGesture(minimumDistance: 1)
+            .targetedToAnyEntity()
+            .onChanged { value in
+                guard case .part(let partID) = WorkbenchTapTarget(from: value.entity) else { return }
+                guard projectStore.project.parts.contains(where: { $0.id == partID }) else { return }
+                guard let nextPosition = partDragPosition(for: partID, translation: value.translation) else { return }
+
+                if partDragSession == nil || partDragSession?.partID != partID {
+                    if let placement = projectStore.project.physical.placement(for: partID) {
+                        partDragSession = WorkbenchPartDragSession(partID: partID, startPosition: placement.position)
+                    }
+                    projectStore.selectPart(id: partID)
+                    pendingWireStart = nil
+                }
+
+                transientPartPositions[partID] = nextPosition
+            }
+            .onEnded { value in
+                guard case .part(let partID) = WorkbenchTapTarget(from: value.entity) else { return }
+                defer {
+                    partDragSession = nil
+                    transientPartPositions.removeValue(forKey: partID)
+                }
+                guard projectStore.project.parts.contains(where: { $0.id == partID }) else { return }
+                let nextPosition = transientPartPositions[partID] ?? partDragPosition(for: partID, translation: value.translation)
+                guard let nextPosition else { return }
+                projectStore.movePhysicalPart(id: partID, to: nextPosition, shouldPersist: true)
             }
     }
 
@@ -202,66 +199,113 @@ private struct RealityKitWorkbenchScene: View {
                 }
             }
     }
-}
 
-private struct WorkbenchHUD: View {
-    @ObservedObject var projectStore: ProjectStore
-    @ObservedObject var simulator: SimulatorViewModel
-    let pendingWireStart: PinReference?
-    let onResetView: () -> Void
-    let onTopView: () -> Void
-    let onFrontView: () -> Void
-    let onZoomIn: () -> Void
-    let onZoomOut: () -> Void
-    let onCancelWire: () -> Void
+    private func partDragPosition(for partID: String, translation: CGSize) -> CanvasPoint? {
+        guard viewportSize.width > 1, viewportSize.height > 1 else { return nil }
+        guard let placement = projectStore.project.physical.placement(for: partID) else { return nil }
+        guard let part = projectStore.project.parts.first(where: { $0.id == partID }) else { return nil }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Workbench")
-                .font(.caption.weight(.semibold))
-            Text("\(projectStore.project.physical.placements.count) parts")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text("Drag to orbit. Pinch to zoom. Tap pins to wire.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            HStack(spacing: 6) {
-                Button("Top", action: onTopView)
-                Button("Front", action: onFrontView)
-                Button("-", action: onZoomOut)
-                Button("+", action: onZoomIn)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            if case .running = simulator.status {
-                Text("Live simulation")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.green)
-            } else {
-                Text(simulator.status.summary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            if let pendingWireStart {
-                Text("Wiring: \(pendingWireStart.partID).\(pendingWireStart.pin)")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.orange)
-                Button("Cancel Wire", action: onCancelWire)
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-            }
-            Button("Reset View", action: onResetView)
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+        let startPosition = partDragSession?.partID == partID
+            ? (partDragSession?.startPosition ?? placement.position)
+            : placement.position
+        let boardCenter = projectStore.project.physical.enclosure.center
+        let projectedPixelsPerMm = min(
+            Double(viewportSize.width) / breadboardSurfaceWidthMm,
+            Double(viewportSize.height) / breadboardSurfaceHeightMm
+        ) * Double(navigation.zoom) * 0.72
+        guard projectedPixelsPerMm > 0.0001 else { return nil }
+
+        let mmPerPoint = 1 / projectedPixelsPerMm
+        let dx = Double(translation.width) * mmPerPoint
+        let dy = Double(translation.height) * mmPerPoint
+        let yaw = navigation.yaw
+        let rotatedX = (dx * cos(yaw)) - (dy * sin(yaw))
+        let rotatedY = (dx * sin(yaw)) + (dy * cos(yaw))
+
+        let candidate = CanvasPoint(
+            x: startPosition.x + rotatedX,
+            y: startPosition.y + rotatedY
+        )
+        return resolvedWorkbenchPosition(
+            candidate,
+            footprint: placement.footprint,
+            partKind: part.kind,
+            boardCenter: boardCenter
+        )
+    }
+
+    private func resolvedWorkbenchPosition(
+        _ position: CanvasPoint,
+        footprint: PhysicalFootprint,
+        partKind: PartKind,
+        boardCenter: CanvasPoint
+    ) -> CanvasPoint {
+        return normalizedBreadboardPosition(
+            position,
+            footprint: footprint,
+            partKind: partKind,
+            boardCenter: boardCenter
+        )
+    }
+
+    private func normalizedBreadboardPosition(
+        _ position: CanvasPoint,
+        footprint: PhysicalFootprint,
+        partKind: PartKind,
+        boardCenter: CanvasPoint
+    ) -> CanvasPoint {
+        let minX = boardCenter.x - (breadboardSurfaceWidthMm / 2) + (footprint.width / 2)
+        let maxX = boardCenter.x + (breadboardSurfaceWidthMm / 2) - (footprint.width / 2)
+        let minY = boardCenter.y - (breadboardSurfaceHeightMm / 2) + (footprint.height / 2)
+        let maxY = boardCenter.y + (breadboardSurfaceHeightMm / 2) - (footprint.height / 2)
+
+        let xCandidates = breadboardColumnCenters(centerX: boardCenter.x).filter { $0 >= minX && $0 <= maxX }
+        let yCandidates = breadboardRowCenters(centerY: boardCenter.y, partKind: partKind, footprintHeight: footprint.height)
+            .filter { $0 >= minY && $0 <= maxY }
+
+        return CanvasPoint(
+            x: nearestCandidate(to: position.x, candidates: xCandidates) ?? position.x.clamped(to: minX...maxX),
+            y: nearestCandidate(to: position.y, candidates: yCandidates) ?? position.y.clamped(to: minY...maxY)
+        )
+    }
+
+    private func breadboardColumnCenters(centerX: Double) -> [Double] {
+        let usableWidth = breadboardSurfaceWidthMm * 0.82
+        let count = max(20, Int((usableWidth / breadboardPitchMm).rounded()))
+        let span = Double(max(count - 1, 1)) * breadboardPitchMm
+        let start = centerX - span / 2
+        return (0..<count).map { start + Double($0) * breadboardPitchMm }
+    }
+
+    private func breadboardRowCenters(centerY: Double, partKind: PartKind, footprintHeight: Double) -> [Double] {
+        if partKind == .board {
+            let minY = centerY - (breadboardSurfaceHeightMm / 2) + (footprintHeight / 2)
+            let maxY = centerY + (breadboardSurfaceHeightMm / 2) - (footprintHeight / 2)
+            return stride(from: minY, through: maxY, by: breadboardPitchMm).map { $0 }
         }
-        .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+
+        if footprintHeight > 32 || partKind == .servo || partKind == .motor || partKind == .rgbLamp {
+            let laneOffset = footprintHeight <= 42 ? breadboardRailRowOffsetsMm[2] : 0
+            return [centerY + laneOffset]
+        }
+
+        let terminalRows = breadboardTerminalRowOffsetsMm.map { centerY + $0 }
+        switch partKind {
+        case .led, .button, .resistor, .buzzer, .speaker, .potentiometer:
+            return terminalRows
+        default:
+            return terminalRows + breadboardRailRowOffsetsMm.map { centerY + $0 }
+        }
+    }
+
+    private func nearestCandidate(to value: Double, candidates: [Double]) -> Double? {
+        candidates.min { abs($0 - value) < abs($1 - value) }
     }
 }
 
 private struct WorkbenchNavigationState: Equatable {
-    static let pitchRange: ClosedRange<Double> = (-1.54)...0.35
-    static let zoomRange: ClosedRange<Double> = 0.14...3.2
+    static let pitchRange: ClosedRange<Double> = (-1.54)...1.54
+    static let zoomRange: ClosedRange<Double> = 0.08...10.0
 
     var yaw: Double = -0.55
     var pitch: Double = -0.42
@@ -269,7 +313,7 @@ private struct WorkbenchNavigationState: Equatable {
     var pan = CGSize(width: 0, height: -0.03)
 
     static let `default` = WorkbenchNavigationState()
-    static let top = WorkbenchNavigationState(yaw: 0, pitch: -1.54, zoom: 1.45, pan: CGSize(width: 0, height: -0.02))
+    static let top = WorkbenchNavigationState(yaw: 0, pitch: 1.54, zoom: 2.05, pan: CGSize(width: 0, height: -0.02))
     static let front = WorkbenchNavigationState(yaw: 0, pitch: -0.02, zoom: 1.05, pan: CGSize(width: 0, height: -0.02))
 }
 
@@ -286,7 +330,9 @@ private final class WorkbenchSceneController {
     private var partEntities: [String: Entity] = [:]
     private var wireEntities: [String: Entity] = [:]
     private var pinEntities: [WorkbenchPinKey: ModelEntity] = [:]
-    private var layoutSignature = ""
+    private var staticSceneSignature = ""
+    private var wireSceneSignature = ""
+    private var transientPartPositions: [String: CanvasPoint] = [:]
     private var installed = false
 
     init() {
@@ -313,7 +359,8 @@ private final class WorkbenchSceneController {
         snapshot: SimulationWorldSnapshot,
         frameCount: Int,
         navigation: WorkbenchNavigationState,
-        pendingWireStart: PinReference?
+        pendingWireStart: PinReference?,
+        transientPartPositions: [String: CanvasPoint]
     ) {
         guard installed == false else {
             update(
@@ -326,7 +373,8 @@ private final class WorkbenchSceneController {
                 snapshot: snapshot,
                 frameCount: frameCount,
                 navigation: navigation,
-                pendingWireStart: pendingWireStart
+                pendingWireStart: pendingWireStart,
+                transientPartPositions: transientPartPositions
             )
             return
         }
@@ -347,7 +395,8 @@ private final class WorkbenchSceneController {
             snapshot: snapshot,
             frameCount: frameCount,
             navigation: navigation,
-            pendingWireStart: pendingWireStart
+            pendingWireStart: pendingWireStart,
+            transientPartPositions: transientPartPositions
         )
     }
 
@@ -361,15 +410,23 @@ private final class WorkbenchSceneController {
         snapshot: SimulationWorldSnapshot,
         frameCount: Int,
         navigation: WorkbenchNavigationState,
-        pendingWireStart: PinReference?
+        pendingWireStart: PinReference?,
+        transientPartPositions: [String: CanvasPoint]
     ) {
         content.cameraTarget = cameraTarget
 
-        let nextSignature = layoutSignature(for: project)
-        if nextSignature != layoutSignature {
+        let nextStaticSignature = staticSignature(for: project)
+        let nextWireSignature = wireSignature(for: project)
+        if nextStaticSignature != staticSceneSignature {
             rebuildStaticScene(for: project)
-            layoutSignature = nextSignature
+            staticSceneSignature = nextStaticSignature
+            wireSceneSignature = nextWireSignature
+        } else if nextWireSignature != wireSceneSignature {
+            rebuildWireEntities(for: project)
+            wireSceneSignature = nextWireSignature
         }
+
+        refreshTransientWireEntitiesIfNeeded(project: project, transientPartPositions: transientPartPositions)
 
         applyNavigation(navigation)
 
@@ -381,13 +438,13 @@ private final class WorkbenchSceneController {
             activeButtons: activeButtons,
             snapshot: snapshot,
             frameCount: frameCount,
-            pendingWireStart: pendingWireStart
+            pendingWireStart: pendingWireStart,
+            transientPartPositions: transientPartPositions
         )
     }
 
     private func rebuildStaticScene(for project: RobotProject) {
         partEntities.removeAll()
-        wireEntities.removeAll()
         pinEntities.removeAll()
         partsContainer.children.removeAll()
 
@@ -404,13 +461,51 @@ private final class WorkbenchSceneController {
             partsContainer.addChild(entity)
         }
 
+        rebuildWireEntities(for: project)
+
+        cameraTarget.position = [0, 0.03, 0]
+    }
+
+    private func rebuildWireEntities(for project: RobotProject) {
+        for entity in wireEntities.values {
+            entity.removeFromParent()
+        }
+        wireEntities.removeAll()
+
         for wire in project.diagram.wires {
-            guard let entity = makeWireEntity(wire: wire, project: project) else { continue }
+            guard let entity = makeWireEntity(wire: wire, project: project, transientPartPositions: transientPartPositions) else { continue }
             wireEntities[wire.id] = entity
             partsContainer.addChild(entity)
         }
+    }
 
-        cameraTarget.position = [0, 0.03, 0]
+    private func refreshTransientWireEntitiesIfNeeded(project: RobotProject, transientPartPositions nextTransientPositions: [String: CanvasPoint]) {
+        guard nextTransientPositions != transientPartPositions else { return }
+
+        let changedPartIDs = Set(transientPartPositions.keys).union(nextTransientPositions.keys).filter { partID in
+            transientPartPositions[partID] != nextTransientPositions[partID]
+        }
+
+        transientPartPositions = nextTransientPositions
+
+        guard changedPartIDs.isEmpty == false else { return }
+
+        let affectedWireIDs = project.diagram.wires
+            .filter { changedPartIDs.contains($0.from.partID) || changedPartIDs.contains($0.to.partID) }
+            .map(\.id)
+
+        guard affectedWireIDs.isEmpty == false else { return }
+
+        for wireID in affectedWireIDs {
+            wireEntities[wireID]?.removeFromParent()
+            wireEntities.removeValue(forKey: wireID)
+        }
+
+        for wire in project.diagram.wires where affectedWireIDs.contains(wire.id) {
+            guard let entity = makeWireEntity(wire: wire, project: project, transientPartPositions: transientPartPositions) else { continue }
+            wireEntities[wire.id] = entity
+            partsContainer.addChild(entity)
+        }
     }
 
     private func applyNavigation(_ navigation: WorkbenchNavigationState) {
@@ -430,7 +525,8 @@ private final class WorkbenchSceneController {
         activeButtons: Set<String>,
         snapshot: SimulationWorldSnapshot,
         frameCount: Int,
-        pendingWireStart: PinReference?
+        pendingWireStart: PinReference?,
+        transientPartPositions: [String: CanvasPoint]
     ) {
         let selectedWire = selectedWireID.flatMap { id in
             project.diagram.wires.first(where: { $0.id == id })
@@ -443,6 +539,13 @@ private final class WorkbenchSceneController {
             else {
                 continue
             }
+
+            entity.position = worldPosition(
+                for: effectivePlacement(placement, partID: part.id, transientPartPositions: transientPartPositions),
+                partKind: part.kind,
+                enclosure: project.physical.enclosure
+            )
+            entity.orientation = simd_quatf(angle: Float(placement.rotationDegrees) * (.pi / 180), axis: [0, 1, 0])
 
             let isSelected = selectedPartID == part.id
             let isActive = CircuitGraph.partIsActive(part, in: project, pinStates: pinStates, activeButtons: activeButtons)
@@ -539,8 +642,12 @@ private final class WorkbenchSceneController {
                 let connectsSelectedWire = selectedWire.map { $0.from == reference || $0.to == reference } ?? false
                 let isPending = pendingWireStart == reference
                 let emphasize = isPending || connectsSelectedWire || isSelected
-                marker.model?.materials = [unlitMaterial(pinMarkerColor(for: pin, emphasized: emphasize, pending: isPending))]
-                let scale: Float = isPending ? 1.8 : (emphasize ? 1.35 : 1.0)
+                marker.model?.materials = [simpleMaterial(NSColor(calibratedWhite: 0.08, alpha: 1), roughness: 0.52, metallic: 0.12)]
+                if let insert = marker.findEntity(named: "jack-insert") as? ModelEntity {
+                    let alpha: CGFloat = isPending ? 0.96 : (emphasize ? 0.84 : 0.04)
+                    insert.model?.materials = [unlitMaterial(pinMarkerColor(for: pin, emphasized: emphasize, pending: isPending).withAlphaComponent(alpha))]
+                }
+                let scale: Float = isPending ? 1.16 : (emphasize ? 1.04 : 0.88)
                 marker.scale = [scale, scale, scale]
             }
         }
@@ -553,7 +660,45 @@ private final class WorkbenchSceneController {
         }
     }
 
-    private func layoutSignature(for project: RobotProject) -> String {
+    private func staticSignature(for project: RobotProject) -> String {
+        let enclosure = project.physical.enclosure
+        let enclosureSignature = [
+            String(format: "%.1f", enclosure.width),
+            String(format: "%.1f", enclosure.height),
+            String(format: "%.1f", enclosure.depth),
+            String(format: "%.1f", enclosure.center.x),
+            String(format: "%.1f", enclosure.center.y)
+        ].joined(separator: "|")
+        let parts = project.parts
+            .sorted { $0.id < $1.id }
+            .map { part in
+                let footprint = PhysicalFootprint.resolved(for: part)
+                return [
+                    part.id,
+                    part.kind.rawValue,
+                    String(format: "%.1f", footprint.width),
+                    String(format: "%.1f", footprint.height),
+                    String(format: "%.1f", footprint.depth)
+                ].joined(separator: "|")
+            }
+            .joined(separator: "\n")
+        let wires = project.diagram.wires
+            .sorted { $0.id < $1.id }
+            .map {
+                [
+                    $0.id,
+                    $0.from.partID,
+                    $0.from.pin,
+                    $0.to.partID,
+                    $0.to.pin,
+                    $0.color
+                ].joined(separator: "|")
+            }
+            .joined(separator: "\n")
+        return [enclosureSignature, parts, wires].joined(separator: "\n--\n")
+    }
+
+    private func wireSignature(for project: RobotProject) -> String {
         let placements = project.physical.placements
             .sorted { $0.partID < $1.partID }
             .map {
@@ -588,34 +733,94 @@ private final class WorkbenchSceneController {
     }
 
     private func makeWorkbenchSurface(enclosure: PhysicalEnclosure) -> Entity {
-        let width = Float(max(enclosure.width + 160, 360)) * 0.001
-        let depth = Float(max(enclosure.height + 140, 280)) * 0.001
-        let tableTop = ModelEntity(
-            mesh: .generateBox(width: width, height: 0.018, depth: depth, cornerRadius: 0.012),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.88, alpha: 1), roughness: 0.78, metallic: 0.02)]
-        )
-        tableTop.position = [0, -0.01, 0]
+        let deskWidth = Float(workbenchDeskWidthMm) * 0.001
+        let deskDepth = Float(workbenchDeskDepthMm) * 0.001
+        let breadboardWidth = Float(breadboardSurfaceWidthMm) * 0.001
+        let breadboardDepth = Float(breadboardSurfaceHeightMm) * 0.001
 
-        let skirt = ModelEntity(
-            mesh: .generateBox(width: width * 0.95, height: 0.03, depth: depth * 0.95, cornerRadius: 0.012),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.82, alpha: 1), roughness: 0.9, metallic: 0.01)]
+        let deskTop = ModelEntity(
+            mesh: .generateBox(width: deskWidth, height: 0.024, depth: deskDepth, cornerRadius: 0.02),
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.82, alpha: 1), roughness: 0.95, metallic: 0.01)]
         )
-        skirt.position = [0, -0.034, 0]
+        deskTop.position = [0, -0.02, 0]
+
+        let breadboard = ModelEntity(
+            mesh: .generateBox(width: breadboardWidth, height: 0.008, depth: breadboardDepth, cornerRadius: 0.012),
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.985, alpha: 1), roughness: 0.94, metallic: 0.01)]
+        )
+        breadboard.position = [0, -0.002, 0]
+
+        let trench = ModelEntity(
+            mesh: .generateBox(width: breadboardWidth * 0.9, height: 0.0012, depth: 0.016, cornerRadius: 0.003),
+            materials: [unlitMaterial(NSColor(calibratedWhite: 0.88, alpha: 1))]
+        )
+        trench.position = [0, 0.0025, 0]
+
+        let railRedTop = ModelEntity(
+            mesh: .generateBox(width: breadboardWidth * 0.9, height: 0.0007, depth: 0.0022, cornerRadius: 0.0008),
+            materials: [unlitMaterial(NSColor.systemRed.withAlphaComponent(0.7))]
+        )
+        railRedTop.position = [0, 0.0026, -breadboardDepth * 0.33]
+        let railBlueTop = railRedTop.clone(recursive: true)
+        railBlueTop.model?.materials = [unlitMaterial(NSColor.systemBlue.withAlphaComponent(0.55))]
+        railBlueTop.position = [0, 0.0026, -breadboardDepth * 0.28]
+        let railRedBottom = railRedTop.clone(recursive: true)
+        railRedBottom.position = [0, 0.0026, breadboardDepth * 0.28]
+        let railBlueBottom = railBlueTop.clone(recursive: true)
+        railBlueBottom.position = [0, 0.0026, breadboardDepth * 0.33]
 
         let entity = Entity()
-        entity.addChild(tableTop)
-        entity.addChild(skirt)
+        entity.addChild(deskTop)
+        entity.addChild(breadboard)
+        entity.addChild(trench)
+        entity.addChild(railRedTop)
+        entity.addChild(railBlueTop)
+        entity.addChild(railRedBottom)
+        entity.addChild(railBlueBottom)
+
+        let terminalColumnCount = max(18, Int((Double(breadboardWidth) * 1000 * 0.82) / breadboardPitchMm))
+        let railColumnCount = max(terminalColumnCount - 2, 12)
+        let terminalSpan = breadboardWidth * 0.82
+        let railSpan = breadboardWidth * 0.78
+
+        for rowOffsetMm in breadboardTerminalRowOffsetsMm {
+            let z = Float(rowOffsetMm) * 0.001
+            for column in 0..<terminalColumnCount {
+                let t = Float(column) / Float(max(terminalColumnCount - 1, 1))
+                let x = -terminalSpan / 2 + t * terminalSpan
+                let hole = ModelEntity(
+                    mesh: .generateCylinder(height: 0.0008, radius: 0.0008),
+                    materials: [unlitMaterial(NSColor(calibratedWhite: 0.78, alpha: 0.75))]
+                )
+                hole.position = [x, 0.0028, z]
+                entity.addChild(hole)
+            }
+        }
+
+        for railOffsetMm in breadboardRailRowOffsetsMm {
+            let z = Float(railOffsetMm) * 0.001
+            for column in 0..<railColumnCount {
+                let t = Float(column) / Float(max(railColumnCount - 1, 1))
+                let x = -railSpan / 2 + t * railSpan
+                let hole = ModelEntity(
+                    mesh: .generateCylinder(height: 0.0008, radius: 0.0008),
+                    materials: [unlitMaterial(NSColor(calibratedWhite: 0.76, alpha: 0.72))]
+                )
+                hole.position = [x, 0.0028, z]
+                entity.addChild(hole)
+            }
+        }
         return entity
     }
 
     private func makeBoundsFrame(enclosure: PhysicalEnclosure) -> Entity {
-        let width = Float(enclosure.width) * 0.001
-        let depth = Float(enclosure.height) * 0.001
+        let width = Float(breadboardSurfaceWidthMm) * 0.001
+        let depth = Float(breadboardSurfaceHeightMm) * 0.001
         let railHeight: Float = 0.003
         let railThickness: Float = 0.004
 
         let entity = Entity()
-        let railMaterial = unlitMaterial(NSColor.systemBlue.withAlphaComponent(0.34))
+        let railMaterial = unlitMaterial(NSColor(calibratedWhite: 0.68, alpha: 0.34))
 
         let top = ModelEntity(mesh: .generateBox(width: width, height: railHeight, depth: railThickness), materials: [railMaterial])
         top.position = [0, 0.001, -depth / 2]
@@ -636,7 +841,7 @@ private final class WorkbenchSceneController {
     private func makePartEntity(part: PartDefinition, placement: PhysicalPartPlacement, enclosure: PhysicalEnclosure) -> Entity {
         let entity = Entity()
         entity.name = partEntityName(for: part.id)
-        entity.position = worldPosition(for: placement, enclosure: enclosure)
+        entity.position = worldPosition(for: placement, partKind: part.kind, enclosure: enclosure)
         entity.orientation = simd_quatf(angle: Float(placement.rotationDegrees) * (.pi / 180), axis: [0, 1, 0])
 
         let pedestal = ModelEntity(
@@ -646,6 +851,7 @@ private final class WorkbenchSceneController {
         pedestal.name = "pedestal"
         pedestal.position = [0, -0.0005, 0]
         entity.addChild(pedestal)
+        entity.addChild(makePanelBase(placement: placement))
 
         switch part.kind {
         case .board:
@@ -682,10 +888,7 @@ private final class WorkbenchSceneController {
     private func installPinMarkers(on entity: Entity, part: PartDefinition, placement: PhysicalPartPlacement) {
         for pin in part.pins {
             guard let position = localPinPosition(for: pin, part: part, placement: placement) else { continue }
-            let marker = ModelEntity(
-                mesh: .generateSphere(radius: 0.0025),
-                materials: [unlitMaterial(pinMarkerColor(for: pin, emphasized: false, pending: false))]
-            )
+            let marker = makePinJackEntity(color: pinMarkerColor(for: pin, emphasized: false, pending: false))
             marker.name = pinEntityName(for: part.id, pin: pin)
             marker.position = position
             marker.components.set(InputTargetComponent())
@@ -695,27 +898,37 @@ private final class WorkbenchSceneController {
         }
     }
 
-    private func makeWireEntity(wire: WireDefinition, project: RobotProject) -> Entity? {
+    private func makeWireEntity(wire: WireDefinition, project: RobotProject, transientPartPositions: [String: CanvasPoint]) -> Entity? {
         guard
-            let start = pinScenePosition(for: wire.from, project: project),
-            let end = pinScenePosition(for: wire.to, project: project)
+            let start = pinScenePosition(for: wire.from, project: project, transientPartPositions: transientPartPositions),
+            let end = pinScenePosition(for: wire.to, project: project, transientPartPositions: transientPartPositions)
         else {
             return nil
         }
 
-        let lift = max(start.y, end.y) + 0.014
-        let startLift = SIMD3<Float>(start.x, lift, start.z)
-        let endLift = SIMD3<Float>(end.x, lift, end.z)
-        let points = [start, startLift, endLift, end]
+        let span = simd_length(end - start)
+        let lift = max(start.y, end.y) + min(0.02, max(0.007, span * 0.22))
+        let lateralSeed = Float(abs(wire.id.hashValue % 11) - 5) * 0.002
+        let control1 = SIMD3<Float>(start.x + lateralSeed, lift, start.z + span * 0.18)
+        let control2 = SIMD3<Float>(end.x - lateralSeed, lift * 0.97, end.z - span * 0.18)
+        let points = sampledCablePath(from: start, control1: control1, control2: control2, to: end, steps: 22)
 
         let root = Entity()
         root.name = wireEntityName(for: wire.id)
 
-        for (segmentIndex, pair) in zip(points.indices, zip(points, points.dropFirst())) {
-            let (from, to) = pair
+        for index in 0..<(points.count - 1) {
+            let from = points[index]
+            let to = points[index + 1]
             guard let segment = makeWireSegment(from: from, to: to, color: wireColor(named: wire.color)) else { continue }
-            segment.name = "wire-segment-\(segmentIndex)"
+            segment.name = "wire-segment-\(index)"
             root.addChild(segment)
+        }
+
+        if let startPlug = makeCablePlug(at: start, toward: points[min(1, points.count - 1)], color: wireColor(named: wire.color)) {
+            root.addChild(startPlug)
+        }
+        if let endPlug = makeCablePlug(at: end, toward: points[max(points.count - 2, 0)], color: wireColor(named: wire.color)) {
+            root.addChild(endPlug)
         }
 
         enableInteraction(on: root)
@@ -728,12 +941,36 @@ private final class WorkbenchSceneController {
         guard length > 0.0005 else { return nil }
 
         let segment = ModelEntity(
-            mesh: .generateCylinder(height: length, radius: 0.0012),
-            materials: [unlitMaterial(color.withAlphaComponent(0.9))]
+            mesh: .generateCylinder(height: length, radius: 0.00095),
+            materials: [simpleMaterial(color.withAlphaComponent(0.92), roughness: 0.72, metallic: 0)]
         )
         segment.position = (start + end) * 0.5
         segment.orientation = simd_quatf(from: SIMD3<Float>(0, 1, 0), to: simd_normalize(delta))
         return segment
+    }
+
+    private func makeCablePlug(at point: SIMD3<Float>, toward neighbor: SIMD3<Float>, color: NSColor) -> Entity? {
+        let delta = neighbor - point
+        guard simd_length(delta) > 0.0001 else { return nil }
+
+        let plug = ModelEntity(
+            mesh: .generateCylinder(height: 0.0075, radius: 0.0021),
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.42, metallic: 0.18)]
+        )
+        plug.position = point + simd_normalize(delta) * 0.003
+        plug.orientation = simd_quatf(from: SIMD3<Float>(0, 1, 0), to: simd_normalize(delta))
+
+        let strainRelief = ModelEntity(
+            mesh: .generateCylinder(height: 0.004, radius: 0.0025),
+            materials: [unlitMaterial(color.withAlphaComponent(0.95))]
+        )
+        strainRelief.position = point + simd_normalize(delta) * 0.0065
+        strainRelief.orientation = plug.orientation
+
+        let entity = Entity()
+        entity.addChild(plug)
+        entity.addChild(strainRelief)
+        return entity
     }
 
     private func makeBoardEntity(placement: PhysicalPartPlacement) -> Entity {
@@ -743,41 +980,56 @@ private final class WorkbenchSceneController {
 
         let board = ModelEntity(
             mesh: .generateBox(width: width, height: thickness, depth: depth, cornerRadius: 0.003),
-            materials: [simpleMaterial(NSColor(calibratedRed: 0.15, green: 0.42, blue: 0.24, alpha: 1), roughness: 0.85)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.97, alpha: 1), roughness: 0.9, metallic: 0.02)]
         )
         board.name = "body"
         board.position = [0, thickness / 2, 0]
 
+        let headerTrackMaterial = simpleMaterial(NSColor(calibratedWhite: 0.14, alpha: 1), roughness: 0.58, metallic: 0.05)
         let leftHeader = ModelEntity(
-            mesh: .generateBox(width: 0.006, height: 0.006, depth: depth * 0.84, cornerRadius: 0.001),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.55)]
+            mesh: .generateBox(width: 0.004, height: 0.0045, depth: depth * 0.84, cornerRadius: 0.001),
+            materials: [headerTrackMaterial]
         )
         leftHeader.position = [-width * 0.34, thickness + 0.001, 0]
 
         let rightHeader = ModelEntity(
-            mesh: .generateBox(width: 0.006, height: 0.006, depth: depth * 0.84, cornerRadius: 0.001),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.55)]
+            mesh: .generateBox(width: 0.004, height: 0.0045, depth: depth * 0.84, cornerRadius: 0.001),
+            materials: [headerTrackMaterial]
         )
         rightHeader.position = [width * 0.34, thickness + 0.001, 0]
 
         let usb = ModelEntity(
             mesh: .generateBox(width: 0.014, height: 0.008, depth: 0.012, cornerRadius: 0.001),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.75, alpha: 1), roughness: 0.25, metallic: 0.5)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.86, alpha: 1), roughness: 0.28, metallic: 0.44)]
         )
         usb.position = [-width * 0.48, thickness + 0.002, -depth * 0.22]
+
+        let display = ModelEntity(
+            mesh: .generateBox(width: width * 0.16, height: 0.0012, depth: depth * 0.16, cornerRadius: 0.001),
+            materials: [unlitMaterial(NSColor(calibratedWhite: 0.16, alpha: 1))]
+        )
+        display.position = [width * 0.18, thickness + 0.0023, -depth * 0.08]
+
+        let accent = ModelEntity(
+            mesh: .generateCylinder(height: 0.0024, radius: 0.006),
+            materials: [simpleMaterial(NSColor.systemRed, roughness: 0.36, metallic: 0.0)]
+        )
+        accent.position = [-width * 0.08, thickness + 0.0022, depth * 0.12]
 
         let entity = Entity()
         entity.addChild(board)
         entity.addChild(leftHeader)
         entity.addChild(rightHeader)
         entity.addChild(usb)
+        entity.addChild(display)
+        entity.addChild(accent)
         return entity
     }
 
     private func makeLEDEntity(part: PartDefinition) -> Entity {
         let body = ModelEntity(
             mesh: .generateCylinder(height: 0.012, radius: 0.0045),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.86, alpha: 1), roughness: 0.24)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.34)]
         )
         body.name = "body"
         body.position = [0, 0.006, 0]
@@ -845,14 +1097,14 @@ private final class WorkbenchSceneController {
     private func makeButtonEntity() -> Entity {
         let base = ModelEntity(
             mesh: .generateBox(width: 0.016, height: 0.008, depth: 0.016, cornerRadius: 0.0015),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.16, alpha: 1), roughness: 0.72)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.72)]
         )
         base.name = "body"
         base.position = [0, 0.004, 0]
 
         let cap = ModelEntity(
             mesh: .generateCylinder(height: 0.006, radius: 0.0055),
-            materials: [simpleMaterial(NSColor(calibratedRed: 0.77, green: 0.16, blue: 0.18, alpha: 1), roughness: 0.44)]
+            materials: [simpleMaterial(NSColor.systemGreen, roughness: 0.36)]
         )
         cap.name = "button-cap"
         cap.position = [0, 0.008, 0]
@@ -866,7 +1118,7 @@ private final class WorkbenchSceneController {
     private func makeSpeakerEntity(part: PartDefinition) -> Entity {
         let housing = ModelEntity(
             mesh: .generateCylinder(height: 0.01, radius: 0.016),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.18, alpha: 1), roughness: 0.82)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.82)]
         )
         housing.name = "body"
         housing.position = [0, 0.005, 0]
@@ -887,7 +1139,7 @@ private final class WorkbenchSceneController {
     private func makeSevenSegmentEntity() -> Entity {
         let body = ModelEntity(
             mesh: .generateBox(width: 0.022, height: 0.005, depth: 0.040, cornerRadius: 0.002),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.1, alpha: 1), roughness: 0.4)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.4)]
         )
         body.name = "body"
         body.position = [0, 0.0025, 0]
@@ -907,14 +1159,14 @@ private final class WorkbenchSceneController {
     private func makePotentiometerEntity() -> Entity {
         let body = ModelEntity(
             mesh: .generateCylinder(height: 0.013, radius: 0.012),
-            materials: [simpleMaterial(NSColor(calibratedRed: 0.20, green: 0.32, blue: 0.74, alpha: 1), roughness: 0.68)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.14, alpha: 1), roughness: 0.68)]
         )
         body.name = "body"
         body.position = [0, 0.0065, 0]
 
         let shaft = ModelEntity(
             mesh: .generateCylinder(height: 0.015, radius: 0.003),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.72, alpha: 1), roughness: 0.24, metallic: 0.6)]
+            materials: [simpleMaterial(NSColor.systemRed, roughness: 0.22, metallic: 0.12)]
         )
         shaft.position = [0, 0.017, 0]
 
@@ -931,16 +1183,12 @@ private final class WorkbenchSceneController {
 
         let board = ModelEntity(
             mesh: .generateBox(width: width, height: thickness, depth: depth, cornerRadius: 0.002),
-            materials: [partMaterial(for: part, isActive: false, selected: false)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.98, alpha: 1), roughness: 0.92, metallic: 0.01)]
         )
         board.name = "body"
         board.position = [0, thickness / 2, 0]
 
-        let feature = ModelEntity(
-            mesh: .generateBox(width: width * 0.28, height: thickness * 1.4, depth: depth * 0.24, cornerRadius: 0.001),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.9, alpha: 1), roughness: 0.3)]
-        )
-        feature.position = [0, thickness + 0.002, 0]
+        let feature = panelFeatureEntity(for: part, width: width, depth: depth, thickness: thickness)
 
         let entity = Entity()
         entity.addChild(board)
@@ -951,7 +1199,7 @@ private final class WorkbenchSceneController {
     private func makeLampEntity() -> Entity {
         let stem = ModelEntity(
             mesh: .generateCylinder(height: 0.03, radius: 0.004),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.82, alpha: 1), roughness: 0.44)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.14, alpha: 1), roughness: 0.44)]
         )
         stem.position = [0, 0.015, 0]
 
@@ -980,7 +1228,7 @@ private final class WorkbenchSceneController {
     private func makeMotorEntity() -> Entity {
         let housing = ModelEntity(
             mesh: .generateCylinder(height: 0.04, radius: 0.014),
-            materials: [simpleMaterial(NSColor(calibratedWhite: 0.72, alpha: 1), roughness: 0.38, metallic: 0.55)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.16, alpha: 1), roughness: 0.38, metallic: 0.55)]
         )
         housing.name = "body"
         housing.orientation = simd_quatf(angle: .pi / 2, axis: [0, 0, 1])
@@ -1003,7 +1251,7 @@ private final class WorkbenchSceneController {
     private func makeServoEntity() -> Entity {
         let body = ModelEntity(
             mesh: .generateBox(width: 0.026, height: 0.034, depth: 0.018, cornerRadius: 0.002),
-            materials: [simpleMaterial(NSColor(calibratedRed: 0.13, green: 0.22, blue: 0.72, alpha: 1), roughness: 0.65)]
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.65)]
         )
         body.name = "body"
         body.position = [0, 0.017, 0]
@@ -1024,14 +1272,14 @@ private final class WorkbenchSceneController {
 
         let leftFinger = ModelEntity(
             mesh: .generateBox(width: 0.004, height: 0.024, depth: 0.004, cornerRadius: 0.001),
-            materials: [simpleMaterial(NSColor.systemOrange, roughness: 0.65)]
+            materials: [simpleMaterial(NSColor.systemRed, roughness: 0.65)]
         )
         leftFinger.name = "left-finger"
         leftFinger.position = [0.006, -0.010, 0]
 
         let rightFinger = ModelEntity(
             mesh: .generateBox(width: 0.004, height: 0.024, depth: 0.004, cornerRadius: 0.001),
-            materials: [simpleMaterial(NSColor.systemOrange, roughness: 0.65)]
+            materials: [simpleMaterial(NSColor.systemRed, roughness: 0.65)]
         )
         rightFinger.name = "right-finger"
         rightFinger.position = [0.006, 0.010, 0]
@@ -1046,36 +1294,110 @@ private final class WorkbenchSceneController {
         return entity
     }
 
-    private func worldPosition(for placement: PhysicalPartPlacement, enclosure: PhysicalEnclosure) -> SIMD3<Float> {
-        let x = Float(placement.position.x - enclosure.center.x) * 0.001
-        let z = Float(placement.position.y - enclosure.center.y) * 0.001
+    private func worldPosition(for placement: PhysicalPartPlacement, partKind: PartKind, enclosure: PhysicalEnclosure) -> SIMD3<Float> {
+        let normalized = resolvedWorkbenchPosition(
+            placement.position,
+            footprint: placement.footprint,
+            partKind: partKind,
+            boardCenter: enclosure.center
+        )
+        let x = Float(normalized.x - enclosure.center.x) * 0.001
+        let z = Float(normalized.y - enclosure.center.y) * 0.001
         let standoff = Float(placement.standoffHeight) * 0.001
         let halfHeight = Float(placement.footprint.depth) * 0.0005
         let faceOffset: Float = placement.face == .internal ? 0 : 0.004
         return [x, standoff + halfHeight + faceOffset, z]
     }
 
+    private func resolvedWorkbenchPosition(
+        _ position: CanvasPoint,
+        footprint: PhysicalFootprint,
+        partKind: PartKind,
+        boardCenter: CanvasPoint
+    ) -> CanvasPoint {
+        return normalizedBreadboardPosition(
+            position,
+            footprint: footprint,
+            partKind: partKind,
+            boardCenter: boardCenter
+        )
+    }
+
+    private func normalizedBreadboardPosition(
+        _ position: CanvasPoint,
+        footprint: PhysicalFootprint,
+        partKind: PartKind,
+        boardCenter: CanvasPoint
+    ) -> CanvasPoint {
+        let minX = boardCenter.x - (breadboardSurfaceWidthMm / 2) + (footprint.width / 2)
+        let maxX = boardCenter.x + (breadboardSurfaceWidthMm / 2) - (footprint.width / 2)
+        let minY = boardCenter.y - (breadboardSurfaceHeightMm / 2) + (footprint.height / 2)
+        let maxY = boardCenter.y + (breadboardSurfaceHeightMm / 2) - (footprint.height / 2)
+
+        let xCandidates = breadboardColumnCenters(centerX: boardCenter.x).filter { $0 >= minX && $0 <= maxX }
+        let yCandidates = breadboardRowCenters(centerY: boardCenter.y, partKind: partKind, footprintHeight: footprint.height)
+            .filter { $0 >= minY && $0 <= maxY }
+
+        return CanvasPoint(
+            x: nearestCandidate(to: position.x, candidates: xCandidates) ?? position.x.clamped(to: minX...maxX),
+            y: nearestCandidate(to: position.y, candidates: yCandidates) ?? position.y.clamped(to: minY...maxY)
+        )
+    }
+
+    private func breadboardColumnCenters(centerX: Double) -> [Double] {
+        let usableWidth = breadboardSurfaceWidthMm * 0.82
+        let count = max(20, Int((usableWidth / breadboardPitchMm).rounded()))
+        let span = Double(max(count - 1, 1)) * breadboardPitchMm
+        let start = centerX - span / 2
+        return (0..<count).map { start + Double($0) * breadboardPitchMm }
+    }
+
+    private func breadboardRowCenters(centerY: Double, partKind: PartKind, footprintHeight: Double) -> [Double] {
+        if partKind == .board {
+            let minY = centerY - (breadboardSurfaceHeightMm / 2) + (footprintHeight / 2)
+            let maxY = centerY + (breadboardSurfaceHeightMm / 2) - (footprintHeight / 2)
+            return stride(from: minY, through: maxY, by: breadboardPitchMm).map { $0 }
+        }
+
+        if footprintHeight > 32 || partKind == .servo || partKind == .motor || partKind == .rgbLamp {
+            let laneOffset = footprintHeight <= 42 ? breadboardRailRowOffsetsMm[2] : 0
+            return [centerY + laneOffset]
+        }
+
+        let terminalRows = breadboardTerminalRowOffsetsMm.map { centerY + $0 }
+        switch partKind {
+        case .led, .button, .resistor, .buzzer, .speaker, .potentiometer:
+            return terminalRows
+        default:
+            return terminalRows + breadboardRailRowOffsetsMm.map { centerY + $0 }
+        }
+    }
+
+    private func nearestCandidate(to value: Double, candidates: [Double]) -> Double? {
+        candidates.min { abs($0 - value) < abs($1 - value) }
+    }
+
     private func partMaterial(for part: PartDefinition, isActive: Bool, selected: Bool) -> any RealityKit.Material {
         let baseColor: NSColor
         switch part.kind {
         case .shiftRegister, .motorDriver:
-            baseColor = NSColor(calibratedWhite: 0.18, alpha: 1)
+            baseColor = NSColor(calibratedWhite: 0.96, alpha: 1)
         case .soilSensor, .lightSensor, .climateSensor, .lineSensor:
-            baseColor = NSColor(calibratedRed: 0.14, green: 0.42, blue: 0.24, alpha: 1)
+            baseColor = NSColor(calibratedWhite: 0.96, alpha: 1)
         case .oledDisplay:
-            baseColor = NSColor(calibratedRed: 0.08, green: 0.10, blue: 0.12, alpha: 1)
+            baseColor = NSColor(calibratedWhite: 0.96, alpha: 1)
         case .relay:
-            baseColor = NSColor(calibratedRed: 0.18, green: 0.31, blue: 0.72, alpha: 1)
+            baseColor = NSColor(calibratedWhite: 0.96, alpha: 1)
         case .microphone:
-            baseColor = NSColor(calibratedWhite: 0.24, alpha: 1)
+            baseColor = NSColor(calibratedWhite: 0.96, alpha: 1)
         case .digitalSensorModule, .analogSensorModule, .i2cSensorModule, .uartSensorModule, .visionSensorModule, .distanceSensorModule:
-            baseColor = NSColor(calibratedRed: 0.18, green: 0.48, blue: 0.28, alpha: 1)
+            baseColor = NSColor(calibratedWhite: 0.96, alpha: 1)
         default:
-            baseColor = NSColor(calibratedWhite: 0.42, alpha: 1)
+            baseColor = NSColor(calibratedWhite: 0.96, alpha: 1)
         }
 
-        let tint = selected ? NSColor.systemBlue.blended(withFraction: 0.35, of: baseColor) ?? baseColor : baseColor
-        return simpleMaterial(tint, roughness: isActive ? 0.32 : 0.78, metallic: 0.08)
+        let tint = selected ? NSColor.systemBlue.blended(withFraction: 0.05, of: baseColor) ?? baseColor : baseColor
+        return simpleMaterial(tint, roughness: isActive ? 0.26 : 0.9, metallic: 0.02)
     }
 
     private func nsColor(for part: PartDefinition, active: Bool) -> NSColor {
@@ -1095,7 +1417,7 @@ private final class WorkbenchSceneController {
         return active ? base : base.withAlphaComponent(0.35)
     }
 
-    private func pinScenePosition(for reference: PinReference, project: RobotProject) -> SIMD3<Float>? {
+    private func pinScenePosition(for reference: PinReference, project: RobotProject, transientPartPositions: [String: CanvasPoint]) -> SIMD3<Float>? {
         guard
             let part = project.parts.first(where: { $0.id == reference.partID }),
             let placement = project.physical.placement(for: reference.partID),
@@ -1104,8 +1426,20 @@ private final class WorkbenchSceneController {
             return nil
         }
 
+        let effectivePlacement = effectivePlacement(placement, partID: reference.partID, transientPartPositions: transientPartPositions)
         let rotation = simd_quatf(angle: Float(placement.rotationDegrees) * (.pi / 180), axis: [0, 1, 0])
-        return worldPosition(for: placement, enclosure: project.physical.enclosure) + rotation.act(local)
+        return worldPosition(for: effectivePlacement, partKind: part.kind, enclosure: project.physical.enclosure) + rotation.act(local)
+    }
+
+    private func effectivePlacement(
+        _ placement: PhysicalPartPlacement,
+        partID: String,
+        transientPartPositions: [String: CanvasPoint]
+    ) -> PhysicalPartPlacement {
+        guard let transientPosition = transientPartPositions[partID] else { return placement }
+        var updatedPlacement = placement
+        updatedPlacement.position = transientPosition
+        return updatedPlacement
     }
 
     private func localPinPosition(for pin: String, part: PartDefinition, placement: PhysicalPartPlacement) -> SIMD3<Float>? {
@@ -1286,20 +1620,144 @@ private final class WorkbenchSceneController {
         return base.withAlphaComponent(emphasized ? 0.94 : 0.6)
     }
 
+    private func makePanelBase(placement: PhysicalPartPlacement) -> Entity {
+        let width = Float(placement.footprint.width) * 0.001
+        let depth = Float(placement.footprint.height) * 0.001
+        let panel = ModelEntity(
+            mesh: .generateBox(width: width, height: 0.0032, depth: depth, cornerRadius: 0.0035),
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.985, alpha: 1), roughness: 0.94, metallic: 0.01)]
+        )
+        panel.name = "panel-base"
+        panel.position = [0, 0.0014, 0]
+
+        let trim = ModelEntity(
+            mesh: .generateBox(width: width * 0.965, height: 0.001, depth: depth * 0.965, cornerRadius: 0.003),
+            materials: [unlitMaterial(NSColor(calibratedWhite: 0.86, alpha: 0.7))]
+        )
+        trim.position = [0, 0.0032, 0]
+
+        let entity = Entity()
+        entity.addChild(panel)
+        entity.addChild(trim)
+
+        let screwRadius = min(width, depth) * 0.05
+        for x in [-1.0 as Float, 1.0] {
+            for z in [-1.0 as Float, 1.0] {
+                let screw = ModelEntity(
+                    mesh: .generateCylinder(height: 0.0022, radius: screwRadius),
+                    materials: [simpleMaterial(NSColor(calibratedWhite: 0.16, alpha: 1), roughness: 0.44, metallic: 0.18)]
+                )
+                screw.position = [x * (width * 0.42), 0.003, z * (depth * 0.42)]
+                entity.addChild(screw)
+            }
+        }
+
+        return entity
+    }
+
+    private func panelFeatureEntity(for part: PartDefinition, width: Float, depth: Float, thickness: Float) -> Entity {
+        let entity = Entity()
+
+        switch part.kind {
+        case .oledDisplay:
+            let screen = ModelEntity(
+                mesh: .generateBox(width: width * 0.6, height: 0.002, depth: depth * 0.38, cornerRadius: 0.002),
+                materials: [unlitMaterial(NSColor(calibratedWhite: 0.12, alpha: 1))]
+            )
+            screen.position = [0, thickness + 0.0022, 0]
+            entity.addChild(screen)
+        case .relay:
+            let block = ModelEntity(
+                mesh: .generateBox(width: width * 0.44, height: 0.008, depth: depth * 0.32, cornerRadius: 0.002),
+                materials: [simpleMaterial(NSColor(calibratedRed: 0.23, green: 0.40, blue: 0.82, alpha: 1), roughness: 0.28, metallic: 0.04)]
+            )
+            block.position = [0, thickness + 0.004, 0]
+            entity.addChild(block)
+        case .soilSensor, .lightSensor, .climateSensor, .digitalSensorModule, .analogSensorModule, .i2cSensorModule, .uartSensorModule, .visionSensorModule, .distanceSensorModule, .lineSensor, .microphone:
+            for index in 0..<3 {
+                let led = ModelEntity(
+                    mesh: .generateCylinder(height: 0.0022, radius: 0.003),
+                    materials: [simpleMaterial(index == 0 ? .systemGreen : (index == 1 ? .systemYellow : .systemRed), roughness: 0.28)]
+                )
+                led.position = [-width * 0.16 + Float(index) * (width * 0.16), thickness + 0.002, depth * 0.18]
+                entity.addChild(led)
+            }
+            let slot = ModelEntity(
+                mesh: .generateBox(width: width * 0.18, height: 0.005, depth: depth * 0.34, cornerRadius: 0.001),
+                materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.44)]
+            )
+            slot.position = [width * 0.18, thickness + 0.003, 0]
+            entity.addChild(slot)
+        case .shiftRegister, .motorDriver:
+            for index in 0..<4 {
+                let knob = ModelEntity(
+                    mesh: .generateCylinder(height: 0.006, radius: 0.0065),
+                    materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.48)]
+                )
+                knob.position = [-width * 0.24 + Float(index) * (width * 0.16), thickness + 0.003, 0]
+                entity.addChild(knob)
+            }
+        default:
+            let feature = ModelEntity(
+                mesh: .generateBox(width: width * 0.22, height: thickness * 1.4, depth: depth * 0.16, cornerRadius: 0.001),
+                materials: [simpleMaterial(NSColor(calibratedWhite: 0.12, alpha: 1), roughness: 0.38)]
+            )
+            feature.position = [0, thickness + 0.0022, 0]
+            entity.addChild(feature)
+        }
+
+        return entity
+    }
+
+    private func makePinJackEntity(color: NSColor) -> ModelEntity {
+        let jack = ModelEntity(
+            mesh: .generateCylinder(height: 0.0022, radius: 0.0032),
+            materials: [simpleMaterial(NSColor(calibratedWhite: 0.08, alpha: 1), roughness: 0.52, metallic: 0.12)]
+        )
+        jack.position = [0, 0.0012, 0]
+
+        let insert = ModelEntity(
+            mesh: .generateCylinder(height: 0.0011, radius: 0.0011),
+            materials: [unlitMaterial(color.withAlphaComponent(0.04))]
+        )
+        insert.name = "jack-insert"
+        insert.position = [0, 0.0024, 0]
+        jack.addChild(insert)
+        return jack
+    }
+
+    private func sampledCablePath(
+        from start: SIMD3<Float>,
+        control1: SIMD3<Float>,
+        control2: SIMD3<Float>,
+        to end: SIMD3<Float>,
+        steps: Int
+    ) -> [SIMD3<Float>] {
+        let count = max(steps, 2)
+        return (0...count).map { index in
+            let t = Float(index) / Float(count)
+            let inv = 1 - t
+            return (inv * inv * inv * start)
+                + (3 * inv * inv * t * control1)
+                + (3 * inv * t * t * control2)
+                + (t * t * t * end)
+        }
+    }
+
     private func wireColor(named name: String) -> NSColor {
         switch name.lowercased() {
         case "black":
-            return NSColor(calibratedWhite: 0.08, alpha: 1)
+            return NSColor(calibratedWhite: 0.10, alpha: 1)
         case "green":
-            return .systemGreen
+            return NSColor(calibratedRed: 0.18, green: 0.58, blue: 0.28, alpha: 1)
         case "red":
-            return .systemRed
+            return NSColor(calibratedRed: 0.85, green: 0.44, blue: 0.42, alpha: 1)
         case "blue":
-            return .systemBlue
+            return NSColor(calibratedRed: 0.44, green: 0.68, blue: 0.84, alpha: 1)
         case "yellow":
-            return .systemYellow
+            return NSColor(calibratedRed: 0.86, green: 0.74, blue: 0.32, alpha: 1)
         default:
-            return .systemGray
+            return NSColor(calibratedWhite: 0.42, alpha: 1)
         }
     }
 
@@ -1348,11 +1806,21 @@ private extension Double {
     func clamped(to range: ClosedRange<Double>) -> Double {
         min(max(self, range.lowerBound), range.upperBound)
     }
+
+    func snapped(to step: Double) -> Double {
+        guard step > 0 else { return self }
+        return (self / step).rounded() * step
+    }
 }
 
 private struct WorkbenchPinKey: Hashable {
     let partID: String
     let pin: String
+}
+
+private struct WorkbenchPartDragSession {
+    let partID: String
+    let startPosition: CanvasPoint
 }
 
 @available(macOS 15.0, *)

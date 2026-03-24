@@ -53,3 +53,38 @@ struct WorkspaceView: View {
         }
     }
 }
+
+struct CanvasModePicker: View {
+    @ObservedObject var projectStore: ProjectStore
+    var showsBackground = true
+
+    var body: some View {
+        HStack {
+            Picker(
+                "Canvas Mode",
+                selection: Binding(
+                    get: { projectStore.selectedCanvasMode },
+                    set: { projectStore.selectCanvasMode($0) }
+                )
+            ) {
+                ForEach(ProjectStore.CanvasMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .frame(width: showsBackground ? 140 : 120)
+
+            if showsBackground {
+                Spacer()
+            }
+        }
+        .padding(.horizontal, showsBackground ? 12 : 0)
+        .padding(.vertical, showsBackground ? 10 : 0)
+        .background {
+            if showsBackground {
+                Rectangle().fill(.bar)
+            }
+        }
+    }
+}

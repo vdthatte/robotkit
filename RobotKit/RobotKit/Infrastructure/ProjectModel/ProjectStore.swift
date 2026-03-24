@@ -3,6 +3,22 @@ import Foundation
 
 @MainActor
 final class ProjectStore: ObservableObject {
+    enum CanvasMode: String, CaseIterable, Identifiable {
+        case schematic
+        case physical
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .schematic:
+                return "2D"
+            case .physical:
+                return "3D"
+            }
+        }
+    }
+
     enum UtilitySidebarTab: String, CaseIterable, Identifiable {
         case inspector
         case runtime
@@ -40,10 +56,12 @@ final class ProjectStore: ObservableObject {
     @Published var activeButtonIDs: Set<String> = []
     @Published var canvasZoom = 1.0
     @Published var canvasOffset = CanvasPoint(x: 0, y: 0)
+    @Published var selectedCanvasMode: CanvasMode = .schematic
     @Published var selectedUtilitySidebarTab: UtilitySidebarTab = .inspector
     @Published private(set) var workspaceURL: URL?
     @Published private(set) var lastSavedURL: URL?
     @Published private(set) var lastSaveError: String?
+    private var pendingPersistWorkItem: DispatchWorkItem?
 
     var selectedPart: PartDefinition? {
         guard let selectedPartID else { return nil }
@@ -70,7 +88,7 @@ final class ProjectStore: ObservableObject {
     }
 
     var isPhysicalModeActive: Bool {
-        selectedUtilitySidebarTab == .physical
+        selectedCanvasMode == .physical
     }
 
     init() {
@@ -101,6 +119,7 @@ final class ProjectStore: ObservableObject {
         partSearchQuery = ""
         canvasZoom = 1.0
         canvasOffset = CanvasPoint(x: 0, y: 0)
+        selectedCanvasMode = .schematic
         selectedUtilitySidebarTab = .inspector
         persist()
     }
@@ -123,6 +142,7 @@ final class ProjectStore: ObservableObject {
         partSearchQuery = ""
         canvasZoom = 1.0
         canvasOffset = CanvasPoint(x: 0, y: 0)
+        selectedCanvasMode = .schematic
         selectedUtilitySidebarTab = .inspector
         persist()
     }
@@ -144,6 +164,7 @@ final class ProjectStore: ObservableObject {
         activeButtonIDs = []
         canvasZoom = 1.0
         canvasOffset = CanvasPoint(x: 0, y: 0)
+        selectedCanvasMode = .schematic
         selectedUtilitySidebarTab = .inspector
         lastSaveError = nil
     }
@@ -262,8 +283,26 @@ final class ProjectStore: ObservableObject {
         isCodeEditorVisible = true
     }
 
+    func selectCanvasMode(_ mode: CanvasMode) {
+        selectedCanvasMode = mode
+
+        switch mode {
+        case .schematic:
+            if selectedUtilitySidebarTab == .physical {
+                selectedUtilitySidebarTab = .inspector
+            }
+        case .physical:
+            if selectedUtilitySidebarTab == .inspector {
+                selectedUtilitySidebarTab = .physical
+            }
+        }
+    }
+
     func selectUtilitySidebarTab(_ tab: UtilitySidebarTab) {
         selectedUtilitySidebarTab = tab
+        if tab == .physical {
+            selectedCanvasMode = .physical
+        }
     }
 
     func addSourceFile() {
@@ -345,16 +384,25 @@ final class ProjectStore: ObservableObject {
         persist()
     }
 
-    func movePhysicalPart(id: String, to position: CanvasPoint, shouldPersist: Bool = true) {
+    func movePhysicalPart(
+        id: String,
+        to position: CanvasPoint,
+        shouldPersist: Bool = true,
+        updateEnclosure: Bool = false
+    ) {
         guard let index = project.physical.placements.firstIndex(where: { $0.partID == id }) else { return }
-        project.physical.placements[index].position = position
-        project.physical.enclosure = project.physical.enclosure.updatingToFit(project.physical.placements)
-        if project.physical.generatedArtifacts.enclosureSCAD.isEmpty == false {
-            project.physical.generateEnclosure()
-            project.prepareForWorkspace()
+        var updatedProject = project
+        updatedProject.physical.placements[index].position = position
+        if updateEnclosure {
+            updatedProject.physical.enclosure = updatedProject.physical.enclosure.updatingToFit(updatedProject.physical.placements)
         }
+        if updatedProject.physical.generatedArtifacts.enclosureSCAD.isEmpty == false {
+            updatedProject.physical.generateEnclosure()
+            updatedProject.prepareForWorkspace()
+        }
+        project = updatedProject
         if shouldPersist {
-            persist()
+            schedulePersist(prepareWorkspace: false, delay: 0.9)
         }
     }
 
@@ -509,9 +557,13 @@ final class ProjectStore: ObservableObject {
         }
     }
 
-    func persist(to destinationURL: URL? = nil) {
+    func persist(to destinationURL: URL? = nil, prepareWorkspace: Bool = true) {
+        pendingPersistWorkItem?.cancel()
+        pendingPersistWorkItem = nil
         do {
-            project.prepareForWorkspace()
+            if prepareWorkspace {
+                project.prepareForWorkspace()
+            }
             let savedURL = try ProjectPersistenceService.save(
                 project,
                 destinationURL: destinationURL ?? workspaceURL,
@@ -524,6 +576,16 @@ final class ProjectStore: ObservableObject {
         } catch {
             lastSaveError = error.localizedDescription
         }
+    }
+
+    private func schedulePersist(to destinationURL: URL? = nil, prepareWorkspace: Bool = true, delay: TimeInterval = 0.22) {
+        pendingPersistWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.persist(to: destinationURL, prepareWorkspace: prepareWorkspace)
+        }
+        pendingPersistWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
     private func addWire(from: PinReference, to: PinReference) {

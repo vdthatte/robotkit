@@ -200,7 +200,13 @@ struct UtilitySidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $projectStore.selectedUtilitySidebarTab) {
+            Picker(
+                "",
+                selection: Binding(
+                    get: { projectStore.selectedUtilitySidebarTab },
+                    set: { projectStore.selectUtilitySidebarTab($0) }
+                )
+            ) {
                 ForEach(ProjectStore.UtilitySidebarTab.allCases) { tab in
                     Text(tab.title).tag(tab)
                 }
