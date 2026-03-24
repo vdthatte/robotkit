@@ -20,23 +20,7 @@ final class ProjectStore: ObservableObject {
             case .world:
                 return "World"
             case .physical:
-                return "Physical"
-            }
-        }
-    }
-
-    enum PhysicalCanvasMode: String, CaseIterable, Identifiable {
-        case isometric
-        case top
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .isometric:
-                return "3D"
-            case .top:
-                return "Top"
+                return "Bench"
             }
         }
     }
@@ -57,7 +41,6 @@ final class ProjectStore: ObservableObject {
     @Published var canvasZoom = 1.0
     @Published var canvasOffset = CanvasPoint(x: 0, y: 0)
     @Published var selectedUtilitySidebarTab: UtilitySidebarTab = .inspector
-    @Published var selectedPhysicalCanvasMode: PhysicalCanvasMode = .isometric
     @Published private(set) var workspaceURL: URL?
     @Published private(set) var lastSavedURL: URL?
     @Published private(set) var lastSaveError: String?

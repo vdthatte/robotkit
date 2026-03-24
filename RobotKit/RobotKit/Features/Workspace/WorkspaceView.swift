@@ -25,7 +25,7 @@ struct WorkspaceView: View {
                     HSplitView {
                         Group {
                             if projectStore.isPhysicalModeActive {
-                                PhysicalCanvasView(projectStore: projectStore)
+                                PhysicalCanvasView(projectStore: projectStore, simulator: simulator)
                             } else {
                                 SchematicCanvasView(projectStore: projectStore, simulator: simulator)
                             }

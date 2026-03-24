@@ -12,8 +12,8 @@ struct PhysicalInspectorView: View {
                     inspectorRow("Envelope", "\(Int(enclosure.width)) × \(Int(enclosure.height)) × \(Int(enclosure.depth)) mm")
                     inspectorRow("Wall", String(format: "%.1f mm", enclosure.wallThickness))
                     inspectorRow("Lid", enclosure.lidStyle.rawValue.capitalized)
-                    inspectorRow("Projection", projectStore.selectedPhysicalCanvasMode.title)
-                    inspectorRow("CAD Output", projectStore.project.generatedTextArtifacts["enclosure.scad"] == nil ? "Not generated" : "enclosure.scad")
+                    inspectorRow("Renderer", "RealityKit")
+                    inspectorRow("Camera", "Orbit")
                 }
 
                 GroupBox("Actions") {
@@ -33,10 +33,6 @@ struct PhysicalInspectorView: View {
                         }
                         .buttonStyle(.bordered)
 
-                        Button("Generate Enclosure") {
-                            projectStore.generateEnclosure()
-                        }
-                        .buttonStyle(.bordered)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
